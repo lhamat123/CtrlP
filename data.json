@@ -1,0 +1,37 @@
+{
+  "companies": [
+    { "id": "c1", "name": "TechCorp",   "color": "#00e5ff", "emoji": "💻" },
+    { "id": "c2", "name": "InnovateSA", "color": "#7c4dff", "emoji": "🚀" },
+    { "id": "c3", "name": "GlobalBiz",  "color": "#ff6b35", "emoji": "🌍" }
+  ],
+  "printers": [
+    {
+      "id": "p1", "code": "IMP-001", "name": "HP LaserJet Pro M404dn",
+      "company": "c1", "dept": "Contabilidad", "status": "Activa",
+      "model": "M404dn", "initDate": "2022-03-15", "closeDate": "",
+      "maintDate": "2024-11-10", "nextMaint": "2025-05-10",
+      "prints": 48200, "location": "Piso 2, Oficina A", "notes": "Alto volumen.", "image": ""
+    },
+    {
+      "id": "p2", "code": "IMP-002", "name": "Canon PIXMA TR8620",
+      "company": "c1", "dept": "RRHH", "status": "Activa",
+      "model": "TR8620", "initDate": "2021-08-01", "closeDate": "",
+      "maintDate": "2024-09-05", "nextMaint": "2025-03-05",
+      "prints": 12500, "location": "Piso 1, RRHH", "notes": "", "image": ""
+    },
+    {
+      "id": "p3", "code": "IMP-003", "name": "Epson EcoTank ET-4760",
+      "company": "c2", "dept": "Marketing", "status": "Mantenimiento",
+      "model": "ET-4760", "initDate": "2023-01-20", "closeDate": "",
+      "maintDate": "2025-01-15", "nextMaint": "2025-07-15",
+      "prints": 8900, "location": "Piso 3, Marketing", "notes": "Toner bajo.", "image": ""
+    },
+    {
+      "id": "p4", "code": "IMP-004", "name": "Brother MFC-L8900CDW",
+      "company": "c3", "dept": "Dirección", "status": "Activa",
+      "model": "MFC-L8900CDW", "initDate": "2020-06-10", "closeDate": "",
+      "maintDate": "2024-06-10", "nextMaint": "",
+      "prints": 95300, "location": "Piso 4, Gerencia", "notes": "", "image": ""
+    }
+  ]
+}
