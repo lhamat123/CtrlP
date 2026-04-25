@@ -171,7 +171,7 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
 .btn-primary:hover{transform:translateY(-1px)}
 .btn-danger{background:rgba(255,82,82,.12);color:var(--red);border:1px solid rgba(255,82,82,.3)}
 .btn-danger:hover{background:rgba(255,82,82,.2)}
-[data-theme=light] .btn-primary,[data-theme=beige] .btn-primary,[data-theme=light] .hbtn,[data-theme=beige] .hbtn{color:#fff}
+[data-theme=light] .btn-primary,[data-theme=beige] .btn-primary{color:#fff}[data-theme=light] .hbtn:not(.ghost):not(.danger),[data-theme=beige] .hbtn:not(.ghost):not(.danger){color:#fff}[data-theme=light] .hbtn.ghost,[data-theme=beige] .hbtn.ghost{color:var(--text) !important}[data-theme=light] .hbtn.danger,[data-theme=beige] .hbtn.danger{color:var(--red) !important}
 
 /* CONFIRM / LOGIN DIALOG */
 .dialog-overlay{position:fixed;inset:0;background:var(--mo);backdrop-filter:blur(5px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
@@ -521,7 +521,7 @@ function renderSidebar() {
   const sel = document.getElementById('co-sel');
   const addOpt = isAuth ? '<option value="__add__" style="color:var(--accent)">＋ Nueva empresa…</option>' : '';
   sel.innerHTML = '<option value="all">🌐 Todas las Empresas</option>' +
-    companies.map(c => `<option value="${c.id}">${c.emoji} ${c.name} (${printers.filter(p=>p.company===c.id).length})</option>`).join('') +
+    companies.map(c => `<option value="${c.id}">${c.name} (${printers.filter(p=>p.company===c.id).length})</option>`).join('') +
     addOpt;
   sel.value = selCo;
 
@@ -531,7 +531,7 @@ function renderSidebar() {
   bf.innerHTML = '<option value="">Todas las marcas</option>' + brands.map(b=>`<option${b===cv?' selected':''}>${b}</option>`).join('');
 
   const fc = document.getElementById('f-company');
-  if (fc) fc.innerHTML = companies.map(c=>`<option value="${c.id}">${c.emoji} ${c.name}</option>`).join('');
+  if (fc) fc.innerHTML = companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
 }
 
 function onCoChange(id) {
@@ -595,7 +595,7 @@ function cardHTML(p) {
         <div class="metric"><div class="metric-label">Cierre</div><div class="metric-value" style="font-size:11px;color:${p.closeDate?'var(--red)':'var(--text2)'}">${fmtD(p.closeDate)||'—'}</div></div>
       </div>
       <div class="card-footer">
-        <div class="card-company-badge" style="border-color:${c.color}33;color:${c.color}">${c.emoji} ${c.name}</div>
+        <div class="card-company-badge" style="border-color:${c.color}33;color:${c.color}"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;flex-shrink:0;vertical-align:middle"></span>${c.name}</div>
         <div>${editBtn}</div>
       </div>
     </div>
@@ -608,7 +608,7 @@ function rowHTML(p) {
   return `<div class="printer-row">
     <div class="row-img">${p.image?`<img src="${p.image}">`:'🖨️'}</div>
     <div><div style="font-size:12px;font-weight:500">${p.name}</div><div style="font-size:9px;color:var(--accent)">${p.code}</div></div>
-    <div><div style="font-size:11px;color:${c.color}">${c.emoji} ${c.name}</div><div style="font-size:9px;color:var(--text2)">${p.dept||'—'}</div></div>
+    <div><div style="font-size:11px;color:${c.color}"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;flex-shrink:0;vertical-align:middle"></span>${c.name}</div><div style="font-size:9px;color:var(--text2)">${p.dept||'—'}</div></div>
     <div style="font-size:10px">${fmtD(p.maintDate)||'—'}</div>
     <div style="font-size:10px;color:${p.nextMaint?'var(--yellow)':'var(--text2)'}">${fmtD(p.nextMaint)||'—'}</div>
     <div style="font-size:11px">${fmtN(p.prints)}</div>
@@ -623,7 +623,7 @@ function compactHTML(p) {
   return `<tr ${click}>
     <td><span class="c-code">${p.code}</span></td><td><span class="c-name">${p.name}</span></td>
     <td><span class="c-muted">${p.model||'—'}</span></td>
-    <td><span class="c-company" style="color:${c.color}">${c.emoji} ${c.name}</span></td>
+    <td><span class="c-company" style="color:${c.color}"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;vertical-align:middle"></span>${c.name}</span></td>
     <td><span class="c-muted">${p.dept||'—'}</span></td>
     <td class="c-num">${fmtN(p.prints)}</td>
     <td class="c-date">${wa?`<span class="c-warn">⚠️ ${d}d</span>`:fmtD(p.maintDate)||'—'}</td>
@@ -643,7 +643,7 @@ function kanbanHTML(list) {
         const click = isAuth?`onclick="openModal('${p.id}')"`:'style="cursor:default"';
         return `<div class="k-card" ${click}><div class="k-code">${p.code}</div><div class="k-name">${p.name}</div>
           <div class="k-meta">
-            <span class="k-badge" style="color:${c.color};border-color:${c.color}44">${c.emoji} ${c.name}</span>
+            <span class="k-badge" style="color:${c.color};border-color:${c.color}44"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;vertical-align:middle"></span>${c.name}</span>
             ${p.dept?`<span class="k-tag">📍 ${p.dept}</span>`:''}
             ${p.prints?`<span class="k-tag">🖨️ ${fmtN(p.prints)}</span>`:''}
             ${wa?`<span class="k-tag" style="color:var(--yellow)">⚠️ ${d}d</span>`:''}
@@ -662,7 +662,7 @@ function updateStats() {
 function openModal(id=null) {
   if (!isAuth) return;
   editId = id; curImg = '';
-  document.getElementById('f-company').innerHTML = companies.map(c=>`<option value="${c.id}">${c.emoji} ${c.name}</option>`).join('');
+  document.getElementById('f-company').innerHTML = companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   const delBtn = document.getElementById('delete-btn');
   if (id) {
     const p = printers.find(x=>x.id===id);
@@ -905,9 +905,9 @@ async function addCompany() {
   if (!isAuth) return;
   const name = prompt('Nombre de la nueva empresa:');
   if (!name||!name.trim()) { renderSidebar(); return; }
-  const emoji = prompt('Emoji (ej: 🏢 🏭 🏦 💼):','🏢')||'🏢';
+  const cleanName = name.trim();
   const colors = ['#00e5ff','#7c4dff','#ff6b35','#00e676','#ffd740','#ff5252','#e040fb'];
-  companies.push({ id:'c'+Date.now(), name:name.trim(), color:colors[companies.length%colors.length], emoji:emoji.trim() });
+  companies.push({ id:'c'+Date.now(), name:cleanName, color:colors[companies.length%colors.length], emoji:'' });
   const ok = await saveData();
   if (!ok) { companies.pop(); }
   else toast('✅ Empresa creada');
@@ -919,8 +919,8 @@ async function deleteCompany() {
   const c = companies.find(x=>x.id===selCo); if (!c) return;
   const count = printers.filter(p=>p.company===c.id).length;
   showConfirm(
-    `¿Eliminar ${c.emoji} ${c.name}?`,
-    `Estás por eliminar la empresa <strong>${c.emoji} ${c.name}</strong>.`,
+    `¿Eliminar ${c.name}?`,
+    `Estás por eliminar la empresa <strong>${c.name}</strong>.`,
     count>0 ? `🖨️ Tiene <strong>${count} impresora${count>1?'s':''}</strong>. Todas se eliminarán permanentemente.` : 'No tiene impresoras. Acción segura.',
     async () => {
       printers  = printers.filter(p=>p.company!==c.id);
