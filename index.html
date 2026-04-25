@@ -416,8 +416,11 @@ function updateAuthUI() {
   tag.textContent   = isAuth ? '✏️ Editor' : '';
   const dBtn = document.getElementById('del-co-btn');
   if (!isAuth && dBtn) dBtn.style.display = 'none';
-  renderSidebar();
-  renderPrinters();
+  // Solo re-renderizar si ya hay datos cargados
+  if (companies.length || printers.length) {
+    renderSidebar();
+    renderPrinters();
+  }
 }
 
 // Intentar restaurar sesión de sessionStorage
@@ -444,7 +447,10 @@ async function ghFetch(method, body) {
 async function loadData() {
   showLoad(true);
   try {
-    const res = await ghFetch('GET');
+    // Lectura siempre pública — sin token, sin auth
+    const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
+      headers: { 'Accept': 'application/vnd.github+json' }
+    });
     if (!res.ok) throw new Error('No se pudo leer el archivo data.json (status '+res.status+')');
     const json = await res.json();
     fileSHA = json.sha;
