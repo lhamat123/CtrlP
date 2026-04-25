@@ -199,6 +199,28 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
   .list-header{display:none}.printer-row{grid-template-columns:38px 1fr 80px 65px}
   .printer-row>div:nth-child(3),.printer-row>div:nth-child(4),.printer-row>div:nth-child(5){display:none}
 }
+
+  /* ── IMAGE CROPPER ── */
+  .cropper-overlay{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:16px}
+  .cropper-overlay.open{display:flex}
+  .cropper-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#fff;margin-bottom:12px;letter-spacing:.5px}
+  .cropper-wrap{position:relative;overflow:hidden;border-radius:10px;cursor:crosshair;flex-shrink:0}
+  .cropper-wrap canvas{display:block}
+  .crop-box{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move;box-sizing:border-box}
+  .crop-handle{position:absolute;width:12px;height:12px;background:#fff;border-radius:2px}
+  .crop-handle.tl{top:-6px;left:-6px;cursor:nw-resize}
+  .crop-handle.tr{top:-6px;right:-6px;cursor:ne-resize}
+  .crop-handle.bl{bottom:-6px;left:-6px;cursor:sw-resize}
+  .crop-handle.br{bottom:-6px;right:-6px;cursor:se-resize}
+  .cropper-info{font-size:11px;color:rgba(255,255,255,.6);margin-top:8px;margin-bottom:10px}
+  .cropper-btns{display:flex;gap:10px;margin-top:4px}
+  .crop-btn{padding:9px 22px;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;cursor:pointer;border:none;transition:all .15s}
+  .crop-btn.cancel{background:rgba(255,255,255,.1);color:#fff}
+  .crop-btn.cancel:hover{background:rgba(255,255,255,.18)}
+  .crop-btn.apply{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000}
+  .crop-btn.apply:hover{transform:translateY(-1px)}
+  .quality-row{display:flex;align-items:center;gap:10px;font-size:11px;color:rgba(255,255,255,.7);margin-top:6px}
+  .quality-row input[type=range]{width:110px;accent-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -697,26 +719,142 @@ function setPreview(src) {
   } else { area.classList.remove('has-image'); }
 }
 
+// ── CROPPER ──
+let cropperImg = null, cropX=0, cropY=0, cropW=0, cropH=0;
+let dragMode=null, dragStartX=0, dragStartY=0, cropStartX=0, cropStartY=0, cropStartW=0, cropStartH=0;
+const DISP_MAX = Math.min(window.innerWidth - 40, 600);
+
 function handleImageUpload(e) {
   const file = e.target.files[0]; if (!file) return;
+  e.target.value = ''; // reset so same file can be re-selected
   const reader = new FileReader();
   reader.onload = ev => {
     const img = new Image();
-    img.onload = () => {
-      const MAX_W=400, MAX_H=300;
-      let w=img.width, h=img.height;
-      if (w>MAX_W||h>MAX_H) { const r=Math.min(MAX_W/w,MAX_H/h); w=Math.round(w*r); h=Math.round(h*r); }
-      const canvas=document.createElement('canvas');
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      curImg = canvas.toDataURL('image/jpeg',0.72);
-      setPreview(curImg);
-      const kb = Math.round(curImg.length*0.75/1024);
-      document.getElementById('img-hint').textContent = `${w}×${h}px · ~${kb} KB`;
-    };
+    img.onload = () => { openCropper(img); };
     img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+function openCropper(img) {
+  cropperImg = img;
+  // Scale image to fit display
+  const scale = Math.min(1, DISP_MAX / img.width, (window.innerHeight * 0.6) / img.height);
+  const dispW = Math.round(img.width * scale);
+  const dispH = Math.round(img.height * scale);
+  const canvas = document.getElementById('cropper-canvas');
+  canvas.width = dispW; canvas.height = dispH;
+  canvas.getContext('2d').drawImage(img, 0, 0, dispW, dispH);
+  // Initial crop = centered 4:3 box covering 80% of image
+  const boxW = Math.round(dispW * 0.9);
+  const boxH = Math.round(Math.min(dispH * 0.9, boxW * 0.75));
+  cropX = Math.round((dispW - boxW) / 2);
+  cropY = Math.round((dispH - boxH) / 2);
+  cropW = boxW; cropH = boxH;
+  updateCropBox();
+  document.getElementById('cropper-overlay').classList.add('open');
+  updateQualityLabel();
+}
+
+function updateCropBox() {
+  const box = document.getElementById('crop-box');
+  box.style.left   = cropX + 'px';
+  box.style.top    = cropY + 'px';
+  box.style.width  = cropW + 'px';
+  box.style.height = cropH + 'px';
+  updateQualityLabel();
+}
+
+// Drag events
+document.addEventListener('DOMContentLoaded', () => {
+  const box = document.getElementById('crop-box');
+  const wrap = document.getElementById('cropper-wrap');
+  box.addEventListener('mousedown', startDrag);
+  box.addEventListener('touchstart', startDrag, {passive:false});
+  wrap.addEventListener('mousemove', onDrag);
+  wrap.addEventListener('touchmove', onDrag, {passive:false});
+  wrap.addEventListener('mouseup', endDrag);
+  wrap.addEventListener('touchend', endDrag);
+});
+
+function getEvtPos(e) {
+  const t = e.touches ? e.touches[0] : e;
+  const rect = document.getElementById('cropper-wrap').getBoundingClientRect();
+  return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+}
+
+function startDrag(e) {
+  e.preventDefault();
+  const pos = getEvtPos(e);
+  const handle = e.target.dataset.h;
+  dragMode = handle || 'move';
+  dragStartX = pos.x; dragStartY = pos.y;
+  cropStartX = cropX; cropStartY = cropY;
+  cropStartW = cropW; cropStartH = cropH;
+}
+
+function onDrag(e) {
+  if (!dragMode) return;
+  e.preventDefault();
+  const pos = getEvtPos(e);
+  const dx = pos.x - dragStartX, dy = pos.y - dragStartY;
+  const canvas = document.getElementById('cropper-canvas');
+  const cw = canvas.width, ch = canvas.height;
+  const MIN = 40;
+  if (dragMode === 'move') {
+    cropX = Math.max(0, Math.min(cw - cropW, cropStartX + dx));
+    cropY = Math.max(0, Math.min(ch - cropH, cropStartY + dy));
+  } else {
+    let nx=cropStartX, ny=cropStartY, nw=cropStartW, nh=cropStartH;
+    if (dragMode==='tl') { nx=cropStartX+dx; ny=cropStartY+dy; nw=cropStartW-dx; nh=cropStartH-dy; }
+    if (dragMode==='tr') { ny=cropStartY+dy; nw=cropStartW+dx; nh=cropStartH-dy; }
+    if (dragMode==='bl') { nx=cropStartX+dx; nw=cropStartW-dx; nh=cropStartH+dy; }
+    if (dragMode==='br') { nw=cropStartW+dx; nh=cropStartH+dy; }
+    if (nw < MIN || nh < MIN) return;
+    cropX=Math.max(0,nx); cropY=Math.max(0,ny);
+    cropW=Math.min(nw, cw-cropX); cropH=Math.min(nh, ch-cropY);
+  }
+  updateCropBox();
+}
+
+function endDrag() { dragMode = null; }
+
+function updateQualityLabel() {
+  const q = parseInt(document.getElementById('crop-quality').value);
+  document.getElementById('crop-qlabel').textContent = q + '%';
+  // Estimate final size
+  const canvas = document.getElementById('cropper-canvas');
+  if (!canvas.width) return;
+  const scale = cropperImg ? (cropperImg.width / canvas.width) : 1;
+  const realW = Math.round(cropW * scale), realH = Math.round(cropH * scale);
+  const outW = Math.min(realW, 400), outH = Math.min(realH, Math.round(outW * realH / realW));
+  const estKb = Math.round(outW * outH * (q/100) * 0.12);
+  document.getElementById('crop-size-est').textContent = `~${estKb} KB · ${outW}×${outH}px`;
+}
+
+function applyCrop() {
+  if (!cropperImg) return;
+  const canvas = document.getElementById('cropper-canvas');
+  const scale = cropperImg.width / canvas.width;
+  const sx = Math.round(cropX * scale), sy = Math.round(cropY * scale);
+  const sw = Math.round(cropW * scale), sh = Math.round(cropH * scale);
+  // Output: max 400px wide
+  const outW = Math.min(sw, 400);
+  const outH = Math.round(outW * sh / sw);
+  const out = document.createElement('canvas');
+  out.width = outW; out.height = outH;
+  out.getContext('2d').drawImage(cropperImg, sx, sy, sw, sh, 0, 0, outW, outH);
+  const q = parseInt(document.getElementById('crop-quality').value) / 100;
+  curImg = out.toDataURL('image/jpeg', q);
+  setPreview(curImg);
+  const kb = Math.round(curImg.length * 0.75 / 1024);
+  document.getElementById('img-hint').textContent = `${outW}×${outH}px · ~${kb} KB guardados`;
+  closeCropper();
+}
+
+function closeCropper() {
+  document.getElementById('cropper-overlay').classList.remove('open');
+  cropperImg = null;
 }
 
 async function savePrinter() {
@@ -825,5 +963,31 @@ function fmtN(n) { if(!n&&n!==0) return '—'; return Number(n).toLocaleString('
 updateAuthUI();
 loadData();
 </script>
+
+<!-- IMAGE CROPPER -->
+<div class="cropper-overlay" id="cropper-overlay">
+  <div class="cropper-title">✂️ Recortar imagen</div>
+  <div class="cropper-wrap" id="cropper-wrap">
+    <canvas id="cropper-canvas"></canvas>
+    <div class="crop-box" id="crop-box">
+      <div class="crop-handle tl" data-h="tl"></div>
+      <div class="crop-handle tr" data-h="tr"></div>
+      <div class="crop-handle bl" data-h="bl"></div>
+      <div class="crop-handle br" data-h="br"></div>
+    </div>
+  </div>
+  <div class="cropper-info" id="cropper-info">Arrastra para mover · esquinas para redimensionar</div>
+  <div class="quality-row">
+    <span>Calidad:</span>
+    <input type="range" id="crop-quality" min="30" max="95" value="72" oninput="updateQualityLabel()">
+    <span id="crop-qlabel">72%</span>
+    <span id="crop-size-est" style="margin-left:6px;color:var(--accent)"></span>
+  </div>
+  <div class="cropper-btns">
+    <button class="crop-btn cancel" onclick="closeCropper()">Cancelar</button>
+    <button class="crop-btn apply" onclick="applyCrop()">✅ Usar esta imagen</button>
+  </div>
+</div>
+
 </body>
 </html>
