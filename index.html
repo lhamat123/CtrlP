@@ -325,9 +325,12 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
       <div class="dialog-title">Acceso de administrador</div>
     </div>
     <div class="dialog-body">
-      <p class="dialog-msg">Ingresa tu contraseña para editar los datos.</p>
+      <p class="dialog-msg">Ingresa tu contraseña y token de GitHub para editar.</p>
       <div class="form-group"><label class="form-label">Contraseña</label>
         <input class="form-input" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="form-group"><label class="form-label">GitHub Token (github_pat_...)</label>
+        <input class="form-input" type="password" id="login-token" placeholder="github_pat_11A..." onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <p class="err-msg" id="login-err"></p>
     </div>
@@ -345,8 +348,7 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
 const GH_USER   = 'lhamat123';       // tu usuario GitHub
 const GH_REPO   = 'CtrlP';           // nombre del repo
 const GH_FILE   = 'data.json';       // archivo de datos
-const APP_PASS  = 'admin1234';       // ← CAMBIA esta contraseña
-const GH_TOKEN  = 'PON_TU_TOKEN_AQUI'; // ← pega tu github_pat_... aquí
+const APP_PASS  = 'admin1234';       // ← cambia esta contraseña si quieres
 // ══════════════════════════════════════════════════
 
 const THEME_KEY = 'pctrl_theme';
@@ -355,7 +357,7 @@ const THEMES    = ['cyber','night','light','beige'];
 
 let companies = [], printers = [], fileSHA = '';
 let selCo = 'all', curView = 'grid', editId = null, curImg = '';
-let ghToken = GH_TOKEN; // Token del config
+let ghToken = '';
 let isAuth  = false;
 
 // ── THEME ──
@@ -386,18 +388,22 @@ function openLogin() {
 function closeLogin() { document.getElementById('login-overlay').classList.remove('open'); }
 
 function doLogin() {
-  const pass  = document.getElementById('login-pass').value;
-  const errEl = document.getElementById('login-err');
+  const pass   = document.getElementById('login-pass').value;
+  const token  = document.getElementById('login-token').value.trim();
+  const errEl  = document.getElementById('login-err');
   if (pass !== APP_PASS) { errEl.textContent = 'Contraseña incorrecta.'; return; }
-  ghToken = GH_TOKEN;
+  if (!token || !token.startsWith('github_')) { errEl.textContent = 'Token inválido. Debe comenzar con github_pat_ o ghp_'; return; }
+  ghToken = token;
   isAuth  = true;
+  try { sessionStorage.setItem('pctrl_tok', ghToken); } catch(e) {}
   closeLogin();
   updateAuthUI();
   toast('✅ Sesión iniciada');
 }
 
 function doLogout() {
-  isAuth = false; ghToken = GH_TOKEN;
+  isAuth = false; ghToken = '';
+  try { sessionStorage.removeItem('pctrl_tok'); } catch(e) {}
   updateAuthUI();
   toast('Sesión cerrada');
 }
@@ -418,7 +424,13 @@ function updateAuthUI() {
   }
 }
 
-// Sesión no persiste entre visitas (por seguridad)
+// Restaurar sesión si existe
+(function(){
+  try {
+    const t = sessionStorage.getItem('pctrl_tok');
+    if (t) { ghToken = t; isAuth = true; }
+  } catch(e){}
+})();
 
 // ── GITHUB API ──
 const API = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`;
