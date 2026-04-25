@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LHAMAT Ctrl+P</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── THEME: CYBER (default) ── */
+  :root {
+    --bg: #0a0c10;
+    --surface: #12151c;
+    --surface2: #1a1e28;
+    --border: #252a38;
+    --accent: #00e5ff;
+    --accent2: #7c4dff;
+    --accent3: #ff6b35;
+    --text: #e8eaf0;
+    --text2: #8892a4;
+    --green: #00e676;
+    --red: #ff5252;
+    --yellow: #ffd740;
+    --card-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    --header-bg: rgba(10,12,16,0.9);
+    --grid-color: rgba(0,229,255,0.03);
+    --modal-overlay-bg: rgba(0,0,0,0.75);
+    --scrollbar: #252a38;
+  }
+
+  /* ── THEME: LIGHT ── */
+  [data-theme="light"] {
+    --bg: #f0f2f7;
+    --surface: #ffffff;
+    --surface2: #e8ecf5;
+    --border: #d0d6e8;
+    --accent: #0077cc;
+    --accent2: #6633cc;
+    --accent3: #e05a20;
+    --text: #1a1e2e;
+    --text2: #5a6480;
+    --green: #00a854;
+    --red: #d93025;
+    --yellow: #c87d00;
+    --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --header-bg: rgba(240,242,247,0.95);
+    --grid-color: rgba(0,119,204,0.04);
+    --modal-overlay-bg: rgba(0,0,0,0.45);
+    --scrollbar: #c8cfe0;
+  }
+
+  /* ── THEME: NIGHT (deep dark) ── */
+  [data-theme="night"] {
+    --bg: #040507;
+    --surface: #090c14;
+    --surface2: #0f1220;
+    --border: #1a1f30;
+    --accent: #b388ff;
+    --accent2: #ea80fc;
+    --accent3: #ff9e80;
+    --text: #dce0f0;
+    --text2: #6872a0;
+    --green: #69f0ae;
+    --red: #ff6e6e;
+    --yellow: #ffe57f;
+    --card-shadow: 0 4px 32px rgba(0,0,0,0.8);
+    --header-bg: rgba(4,5,7,0.96);
+    --grid-color: rgba(179,136,255,0.025);
+    --modal-overlay-bg: rgba(0,0,0,0.88);
+    --scrollbar: #1a1f30;
+  }
+
+  /* ── THEME: BEIGE (warm paper) ── */
+  [data-theme="beige"] {
+    --bg: #f5efe6;
+    --surface: #faf6f0;
+    --surface2: #ede5d8;
+    --border: #d8cbbf;
+    --accent: #8b5e3c;
+    --accent2: #b07c3e;
+    --accent3: #c0562a;
+    --text: #2c1f12;
+    --text2: #7a6555;
+    --green: #4a7c59;
+    --red: #a8392d;
+    --yellow: #a07000;
+    --card-shadow: 0 4px 20px rgba(80,50,20,0.12);
+    --header-bg: rgba(245,239,230,0.95);
+    --grid-color: rgba(139,94,60,0.04);
+    --modal-overlay-bg: rgba(30,15,5,0.55);
+    --scrollbar: #c8b9a8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-color) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--header-bg);
+    backdrop-filter: blur(12px);
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 0 20px rgba(0,229,255,0.3);
+  }
+
+  .logo-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--accent); }
+
+  .header-stats {
+    display: flex;
+    gap: 10px;
+  }
+
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .stat-pill .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .header-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 8px;
+    color: #000;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .header-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,229,255,0.4); }
+
+  @media (max-width: 600px) {
+    .header-stats { display: none; }
+    .logo-text { font-size: 15px; }
+    .logo-icon { width: 34px; height: 34px; font-size: 16px; }
+    .header-btn { font-size: 11px; padding: 7px 10px; }
+  }
+
+  /* ── LAYOUT ── */
+  .app { display: flex; height: calc(100vh - 73px); position: relative; z-index: 1; }
+
+  /* ── COMPANY LISTBOX in toolbar ── */
+  .company-select-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .company-listbox {
+    padding: 7px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+    min-width: 130px;
+    max-width: 190px;
+  }
+  .company-listbox:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,229,255,0.1); }
+
+  /* Toolbar responsive */
+  /* Toolbar */
+  .toolbar {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    flex: 1;
+    min-width: 100px;
+    max-width: 240px;
+  }
+
+  .search-box input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    width: 100%;
+  }
+
+  .search-box input::placeholder { color: var(--text2); }
+
+  .filter-select {
+    padding: 7px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    outline: none;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 600px) {
+    .toolbar { padding: 8px 10px; gap: 6px; }
+    .company-listbox { min-width: 110px; max-width: 150px; font-size: 11px; }
+    .filter-select { font-size: 10px; padding: 6px 7px; }
+    .search-box { min-width: 80px; padding: 6px 10px; }
+    .search-box input { font-size: 11px; }
+  }
+
+  /* ── SIDEBAR (empresas) ── (kept for class compatibility but hidden) */
+  .sidebar {
+    display: none;
+  }
+
+  .sidebar-title {
+    padding: 20px 20px 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text2);
+    text-transform: uppercase;
+  }
+
+  .company-list { flex: 1; overflow-y: auto; padding: 0 10px 10px; }
+
+  .company-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 2px;
+    border: 1px solid transparent;
+  }
+
+  .company-item:hover { background: var(--surface2); }
+  .company-item.active {
+    background: rgba(0,229,255,0.08);
+    border-color: rgba(0,229,255,0.2);
+  }
+
+  .company-avatar {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    flex-shrink: 0;
+  }
+
+  .company-info { flex: 1; min-width: 0; }
+
+  .company-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .company-count {
+    font-size: 10px;
+    color: var(--text2);
+  }
+
+  .company-item.active .company-name { color: var(--accent); }
+
+  .sidebar-footer {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .add-company-btn {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .view-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px;
+    flex-shrink: 0;
+  }
+
+  .view-btn {
+    padding: 6px 10px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .view-btn.active { background: var(--accent); color: #000; }
+
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .printers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  @media (max-width: 600px) {
+    .content-area { padding: 10px; }
+    .printers-grid { grid-template-columns: 1fr; gap: 10px; }
+    .printer-row { grid-template-columns: 40px 1fr 80px 60px; gap: 8px; }
+    .printer-row > div:nth-child(3),
+    .printer-row > div:nth-child(4),
+    .printer-row > div:nth-child(5) { display: none; }
+    .list-header { display: none; }
+  }
+
+  .printers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Printer Card */
+  .printer-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+  .printer-card:hover {
+    border-color: rgba(0,229,255,0.3);
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow), 0 0 20px rgba(0,229,255,0.08);
+  }
+
+  .card-image {
+    height: 140px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .card-image .no-img {
+    font-size: 48px;
+    opacity: 0.2;
+  }
+
+  .card-status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.5px;
+  }
+
+  .status-active { background: rgba(0,230,118,0.15); color: var(--green); border: 1px solid rgba(0,230,118,0.3); }
+  .status-maintenance { background: rgba(255,215,64,0.15); color: var(--yellow); border: 1px solid rgba(255,215,64,0.3); }
+  .status-inactive { background: rgba(255,82,82,0.15); color: var(--red); border: 1px solid rgba(255,82,82,0.3); }
+
+  .card-body { padding: 14px; }
+
+  .card-id {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .card-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .card-dept {
+    font-size: 11px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  .card-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .metric {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .metric-label { font-size: 9px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+  .metric-value { font-size: 13px; font-weight: 500; }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .card-company-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  .icon-btn {
+    width: 28px; height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: none;
+    color: var(--text2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    transition: all 0.15s;
+  }
+
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* List row */
+  .printer-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 50px 1fr 1fr 120px 120px 100px 80px 80px;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .printer-row:hover { border-color: rgba(0,229,255,0.2); }
+
+  .row-img {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    background: var(--surface2);
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .row-img img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--modal-overlay-bg);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 95vh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+
+  @media (max-width: 600px) {
+    .modal { border-radius: 12px; }
+    .modal-body { padding: 14px; }
+    .modal-header { padding: 14px 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .modal-close {
+    width: 32px; height: 32px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    transition: all 0.15s;
+  }
+
+  .modal-close:hover { border-color: var(--red); color: var(--red); }
+
+  .modal-body { padding: 24px; }
+
+  /* Image upload */
+  .image-upload-area {
+    width: 100%;
+    height: 160px;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface2);
+  }
+
+  .image-upload-area:hover { border-color: var(--accent); }
+  .image-upload-area.has-image { border-style: solid; border-color: var(--accent); }
+
+  .image-upload-area img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+
+  .upload-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border-radius: 10px;
+  }
+
+  .image-upload-area:hover .upload-overlay { opacity: 1; }
+
+  .upload-text { font-size: 12px; color: var(--text2); }
+  .upload-icon { font-size: 28px; }
+
+  /* Form grid */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1/-1; }
+
+  .form-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+  }
+
+  .form-input, .form-select, .form-textarea {
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0,229,255,0.1);
+  }
+
+  .form-textarea { resize: vertical; min-height: 70px; }
+
+  .form-section {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin: 20px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    grid-column: 1/-1;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text2);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover { color: var(--text); border-color: var(--text2); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000;
+  }
+
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,229,255,0.3); }
+
+  .btn-danger {
+    background: rgba(255,82,82,0.12);
+    color: var(--red);
+    border: 1px solid rgba(255,82,82,0.3);
+  }
+
+  .btn-danger:hover { background: rgba(255,82,82,0.2); }
+
+  /* Empty state */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    color: var(--text2);
+    text-align: center;
+    gap: 12px;
+  }
+
+  .empty-icon { font-size: 56px; opacity: 0.3; }
+  .empty-text { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 600; color: var(--text); }
+  .empty-sub { font-size: 13px; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 10px; }
+
+  /* List header */
+  .list-header {
+    display: grid;
+    grid-template-columns: 50px 1fr 1fr 120px 120px 100px 80px 80px;
+    gap: 12px;
+    padding: 8px 16px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+
+  .maint-alert {
+    background: rgba(255,215,64,0.1);
+    border: 1px solid rgba(255,215,64,0.2);
+    color: var(--yellow);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  /* ── COMPACT TABLE VIEW ── */
+  .printers-compact {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .printers-compact thead th {
+    padding: 9px 13px;
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 2;
+  }
+  .printers-compact tbody tr {
+    border-bottom: 1px solid rgba(37,42,56,0.6);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .printers-compact tbody tr:hover { background: rgba(0,229,255,0.04); }
+  .printers-compact tbody td { padding: 7px 13px; vertical-align: middle; }
+  .c-code  { color: var(--accent); font-size: 10px; letter-spacing: 1px; white-space: nowrap; }
+  .c-name  { font-weight: 600; font-size: 12px; white-space: nowrap; }
+  .c-muted { color: var(--text2); font-size: 10px; }
+  .c-num   { text-align: right; font-size: 11px; font-variant-numeric: tabular-nums; }
+  .c-date  { font-size: 10px; color: var(--text2); white-space: nowrap; }
+  .c-warn  { color: var(--yellow); font-size: 10px; }
+  .c-company { font-size: 11px; white-space: nowrap; }
+
+  /* ── KANBAN VIEW ── */
+  .kanban-board {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  @media(max-width:700px){ .kanban-board { grid-template-columns:1fr; } }
+  .kanban-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    overflow: hidden;
+  }
+  .kanban-col-head {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+  }
+  .kanban-col-head .k-cnt {
+    background: var(--surface2);
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 10px;
+    color: var(--text2);
+    font-family: 'DM Mono', monospace;
+  }
+  .kanban-cards { padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+  .k-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .k-card:hover { border-color: rgba(0,229,255,0.35); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
+  .k-code  { font-size: 9px; color: var(--accent); letter-spacing: 1px; margin-bottom: 3px; }
+  .k-name  { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; }
+  .k-meta  { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .k-badge { font-size: 10px; padding: 2px 7px; border-radius: 5px; border: 1px solid; white-space: nowrap; }
+  .k-tag   { font-size: 10px; color: var(--text2); white-space: nowrap; }
+  /* ── THEME SWITCHER ── */
+  .theme-switcher {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px;
+    flex-shrink: 0;
+  }
+  .theme-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    padding: 0;
+    background: none;
+    position: relative;
+  }
+  .theme-btn:hover { transform: scale(1.15); }
+  .theme-btn.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,229,255,0.15); }
+  [data-theme="light"] .theme-btn.active { box-shadow: 0 0 0 3px rgba(0,119,204,0.18); }
+  [data-theme="beige"] .theme-btn.active { box-shadow: 0 0 0 3px rgba(139,94,60,0.18); }
+  [data-theme="night"] .theme-btn.active { box-shadow: 0 0 0 3px rgba(179,136,255,0.2); }
+
+  @media (max-width: 600px) {
+    .theme-switcher { gap: 2px; padding: 2px; }
+    .theme-btn { width: 22px; height: 22px; font-size: 11px; }
+  }
+
+  /* Light theme: darken btn-primary text stays readable */
+  [data-theme="light"] .btn-primary,
+  [data-theme="beige"] .btn-primary { color: #fff; }
+  [data-theme="light"] .header-btn,
+  [data-theme="beige"] .header-btn { color: #fff; }
+
+  /* Light/beige: form inputs need proper border on focus */
+  [data-theme="light"] .form-input:focus,
+  [data-theme="light"] .form-select:focus,
+  [data-theme="light"] .form-textarea:focus,
+  [data-theme="beige"] .form-input:focus,
+  [data-theme="beige"] .form-select:focus,
+  [data-theme="beige"] .form-textarea:focus {
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.08);
+  }
+
+  /* Compact table sticky header for light/beige needs surface bg */
+  [data-theme="light"] .printers-compact thead th,
+  [data-theme="beige"] .printers-compact thead th { background: var(--bg); }
+
+  /* modal-header sticky background */
+  .modal-header { background: var(--surface); }
+
+
+  /* ── DELETE COMPANY BUTTON ── */
+  .del-co-btn {
+    width: 32px; height: 32px;
+    background: rgba(255,82,82,0.1);
+    border: 1px solid rgba(255,82,82,0.3);
+    border-radius: 7px;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .del-co-btn:hover { background: rgba(255,82,82,0.22); border-color: var(--red); transform: scale(1.05); }
+
+  /* ── CONFIRM DIALOG ── */
+  .confirm-overlay {
+    position: fixed; inset: 0;
+    background: var(--mo);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  .confirm-overlay.open { display: flex; }
+  .confirm-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%; max-width: 400px;
+    animation: slideUp 0.2s ease;
+    overflow: hidden;
+  }
+  .confirm-head {
+    padding: 18px 20px 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .confirm-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: rgba(255,82,82,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .confirm-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; }
+  .confirm-body { padding: 0 20px 16px; }
+  .confirm-msg { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; }
+  .confirm-warn {
+    background: rgba(255,82,82,0.08);
+    border: 1px solid rgba(255,82,82,0.2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: var(--red);
+    line-height: 1.5;
+  }
+  .confirm-footer {
+    display: flex; gap: 8px; justify-content: flex-end;
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🖨️</div>
+    <div class="logo-text">LHAMAT <span>Ctrl+P</span></div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill"><div class="dot"></div><span id="total-count">0 impresoras</span></div>
+    <div class="stat-pill" style="color: var(--yellow);">⚠️ <span id="maint-count">0 mantenimiento</span></div>
+  </div>
+  <div class="theme-switcher" title="Cambiar tema">
+    <button class="theme-btn active" id="theme-cyber"  onclick="setTheme('cyber')"  title="Cyber (oscuro)">🌌</button>
+    <button class="theme-btn"        id="theme-night"  onclick="setTheme('night')"  title="Noche profunda">🌙</button>
+    <button class="theme-btn"        id="theme-light"  onclick="setTheme('light')"  title="Claro">☀️</button>
+    <button class="theme-btn"        id="theme-beige"  onclick="setTheme('beige')"  title="Beige cálido">📜</button>
+  </div>
+  <button class="header-btn" onclick="openModal()">＋ Nueva Impresora</button>
+</header>
+
+<div class="app">
+  <!-- Main -->
+  <div class="main">
+    <div class="toolbar">
+      <div class="company-select-wrap">
+        <select class="company-listbox" id="company-listbox" onchange="selectCompanyFromList(this.value)">
+          <option value="all">🌐 Todas las Empresas</option>
+        </select>
+        <button class="del-co-btn" id="del-co-btn" onclick="deleteCompany()" title="Eliminar empresa" style="display:none">🗑</button>
+      </div>
+      <div class="search-box">
+        <span>🔍</span>
+        <input type="text" placeholder="Buscar impresora..." id="search-input" oninput="renderPrinters()">
+      </div>
+      <select class="filter-select" id="brand-filter" onchange="renderPrinters()">
+        <option value="">Todas las marcas</option>
+      </select>
+      <select class="filter-select" id="status-filter" onchange="renderPrinters()">
+        <option value="">Todos los estados</option>
+        <option value="Activa">Activa</option>
+        <option value="Mantenimiento">Mantenimiento</option>
+        <option value="Inactiva">Inactiva</option>
+      </select>
+      <div class="view-toggle">
+        <button class="view-btn active" id="grid-btn"    onclick="setView('grid')"    title="Tarjetas">⊞</button>
+        <button class="view-btn"        id="list-btn"    onclick="setView('list')"    title="Lista">☰</button>
+        <button class="view-btn"        id="compact-btn" onclick="setView('compact')" title="Compacta">≡</button>
+        <button class="view-btn"        id="kanban-btn"  onclick="setView('kanban')"  title="Kanban">▣</button>
+      </div>
+    </div>
+    <div class="content-area" id="content-area"></div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Nueva Impresora</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Image upload -->
+      <div class="image-upload-area" id="image-upload-area" onclick="document.getElementById('img-input').click()">
+        <input type="file" id="img-input" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+        <span class="upload-icon">📷</span>
+        <span class="upload-text">Haz clic para subir imagen de la impresora</span>
+        <div class="upload-overlay">
+          <span style="font-size:24px">📷</span>
+          <span style="font-size:12px;color:#fff">Cambiar imagen</span>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-section">Identificación</div>
+
+        <div class="form-group">
+          <label class="form-label">ID / Código</label>
+          <input type="text" class="form-input" id="f-id" placeholder="IMP-001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-input" id="f-name" placeholder="HP LaserJet Pro">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Empresa</label>
+          <select class="form-select" id="f-company"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Departamento</label>
+          <input type="text" class="form-input" id="f-dept" placeholder="Contabilidad, IT, RRHH...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estado</label>
+          <select class="form-select" id="f-status">
+            <option>Activa</option>
+            <option>Mantenimiento</option>
+            <option>Inactiva</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Modelo</label>
+          <input type="text" class="form-input" id="f-model" placeholder="M404dn">
+        </div>
+
+        <div class="form-section">Fechas</div>
+
+        <div class="form-group">
+          <label class="form-label">Fecha Inicialización</label>
+          <input type="date" class="form-input" id="f-init-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha Cierre</label>
+          <input type="date" class="form-input" id="f-close-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Último Mantenimiento</label>
+          <input type="date" class="form-input" id="f-maint-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Próximo Mantenimiento</label>
+          <input type="date" class="form-input" id="f-next-maint">
+        </div>
+
+        <div class="form-section">Estadísticas</div>
+
+        <div class="form-group">
+          <label class="form-label">Impresiones Efectuadas</label>
+          <input type="number" class="form-input" id="f-prints" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ubicación Física</label>
+          <input type="text" class="form-input" id="f-location" placeholder="Piso 2, Sala B">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Notas</label>
+          <textarea class="form-textarea" id="f-notes" placeholder="Observaciones o detalles adicionales..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="delete-btn" style="margin-right:auto;display:none" onclick="deletePrinter()">🗑 Eliminar</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePrinter()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STORAGE ──
+const STORE_KEY = 'printctrl_v1';
+const THEME_KEY = 'printctrl_theme';
+
+// ── THEME ──
+const THEMES = ['cyber','night','light','beige'];
+
+function setTheme(theme) {
+  if (!THEMES.includes(theme)) theme = 'cyber';
+  const root = document.documentElement;
+  if (theme === 'cyber') {
+    root.removeAttribute('data-theme');
+  } else {
+    root.setAttribute('data-theme', theme);
+  }
+  // Update active button
+  THEMES.forEach(t => {
+    const btn = document.getElementById('theme-' + t);
+    if (btn) btn.classList.toggle('active', t === theme);
+  });
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY) || 'cyber';
+  setTheme(saved);
+}
+
+initTheme();
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      return { companies: d.companies || defaultCompanies(), printers: d.printers || defaultPrinters() };
+    }
+  } catch(e) {}
+  return { companies: defaultCompanies(), printers: defaultPrinters() };
+}
+
+function saveData() {
+  localStorage.setItem(STORE_KEY, JSON.stringify({ companies, printers }));
+}
+
+function defaultCompanies() {
+  return [
+    { id: 'c1', name: 'TechCorp',   color: '#00e5ff', emoji: '💻' },
+    { id: 'c2', name: 'InnovateSA', color: '#7c4dff', emoji: '🚀' },
+    { id: 'c3', name: 'GlobalBiz',  color: '#ff6b35', emoji: '🌍' },
+  ];
+}
+
+function defaultPrinters() {
+  return [
+    { id:'p1', code:'IMP-001', name:'HP LaserJet Pro M404dn', company:'c1', dept:'Contabilidad', status:'Activa', model:'M404dn', initDate:'2022-03-15', closeDate:'', maintDate:'2024-11-10', nextMaint:'2025-05-10', prints:48200, location:'Piso 2, Oficina A', notes:'Alto volumen de impresión.', image:'' },
+    { id:'p2', code:'IMP-002', name:'Canon PIXMA TR8620',      company:'c1', dept:'Recursos Humanos', status:'Activa', model:'TR8620', initDate:'2021-08-01', closeDate:'', maintDate:'2024-09-05', nextMaint:'2025-03-05', prints:12500, location:'Piso 1, RRHH', notes:'', image:'' },
+    { id:'p3', code:'IMP-003', name:'Epson EcoTank ET-4760',   company:'c2', dept:'Marketing', status:'Mantenimiento', model:'ET-4760', initDate:'2023-01-20', closeDate:'', maintDate:'2025-01-15', nextMaint:'2025-07-15', prints:8900, location:'Piso 3, Marketing', notes:'Toner bajo, en revisión.', image:'' },
+    { id:'p4', code:'IMP-004', name:'Brother MFC-L8900CDW',    company:'c3', dept:'Dirección', status:'Activa', model:'MFC-L8900CDW', initDate:'2020-06-10', closeDate:'2024-12-31', maintDate:'2024-06-10', nextMaint:'', prints:95300, location:'Piso 4, Gerencia', notes:'Unidad dada de baja.', image:'' },
+  ];
+}
+
+// ── DATA ──
+const _data = loadData();
+let companies = _data.companies;
+let printers  = _data.printers;
+
+let selectedCompany = 'all';
+let currentView = 'grid';
+let editingId = null;
+let currentImage = '';
+
+// ── INIT ──
+renderSidebar();
+renderPrinters();
+updateStats();
+
+// ── SIDEBAR / LISTBOX ──
+function renderSidebar() {
+  // Populate company listbox
+  const lb = document.getElementById('company-listbox');
+  if (lb) {
+    lb.innerHTML = '<option value="all">🌐 Todas las Empresas</option>' +
+      companies.map(c => `<option value="${c.id}">${c.emoji} ${c.name} (${printers.filter(p=>p.company===c.id).length})</option>`).join('') +
+      '<option value="__add__" style="color:#00e5ff;border-top:1px solid #333">＋ Nueva empresa…</option>';
+    lb.value = selectedCompany;
+  }
+
+  // Update brand filter (extract brand = first word of model or name)
+  function extractBrand(p) {
+    return (p.model || p.name || '').trim().split(/\s+/)[0];
+  }
+  const brands = [...new Set(printers.map(extractBrand).filter(Boolean))].sort();
+  const bf = document.getElementById('brand-filter');
+  if (bf) {
+    const curBrand = bf.value;
+    bf.innerHTML = '<option value="">Todas las marcas</option>' + brands.map(b => `<option ${b===curBrand?'selected':''}>${b}</option>`).join('');
+  }
+
+  // Company select in form
+  const fc = document.getElementById('f-company');
+  if (fc) fc.innerHTML = companies.map(c => `<option value="${c.id}">${c.emoji} ${c.name}</option>`).join('');
+}
+
+function selectCompanyFromList(id) {
+  if (id === '__add__') {
+    addCompany();
+    return;
+  }
+  selectedCompany = id;
+  renderSidebar();
+  renderPrinters();
+  updateHeader();
+  // Show/hide delete company button
+  const dBtn = document.getElementById('del-co-btn');
+  if (dBtn) dBtn.style.display = (id !== 'all') ? 'flex' : 'none';
+}
+
+function updateHeader() {
+  // Header info now handled by listbox — no separate avatar/name elements
+}
+
+// ── PRINTERS ──
+function getFiltered() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const brand = document.getElementById('brand-filter').value.toLowerCase();
+  const status = document.getElementById('status-filter').value;
+  return printers.filter(p => {
+    if (selectedCompany !== 'all' && p.company !== selectedCompany) return false;
+    if (brand) {
+      const pBrand = (p.model || p.name || '').trim().split(/\s+/)[0].toLowerCase();
+      if (pBrand !== brand) return false;
+    }
+    if (status && p.status !== status) return false;
+    if (q && !p.name.toLowerCase().includes(q) && !p.code.toLowerCase().includes(q) && !p.dept.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function renderPrinters() {
+  const area = document.getElementById('content-area');
+  const list = getFiltered();
+
+  if (!list.length) {
+    area.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🖨️</div>
+      <div class="empty-text">Sin impresoras</div>
+      <div class="empty-sub">Agrega una impresora o cambia los filtros</div>
+    </div>`;
+    return;
+  }
+
+  if (currentView === 'grid') {
+    area.innerHTML = `<div class="printers-grid">${list.map(cardHTML).join('')}</div>`;
+  } else if (currentView === 'list') {
+    area.innerHTML = `
+      <div class="list-header">
+        <div></div><div>Impresora</div><div>Empresa / Dept.</div>
+        <div>Últ. Mant.</div><div>Próx. Mant.</div>
+        <div>Impresiones</div><div>Estado</div><div></div>
+      </div>
+      <div class="printers-list">${list.map(rowHTML).join('')}</div>`;
+  } else if (currentView === 'compact') {
+    area.innerHTML = `
+      <table class="printers-compact">
+        <thead><tr>
+          <th>Código</th><th>Nombre</th><th>Modelo</th><th>Empresa</th><th>Dpto.</th>
+          <th style="text-align:right">Impresiones</th><th>Últ. Mant.</th><th>Próx. Mant.</th><th>Estado</th>
+        </tr></thead>
+        <tbody>${list.map(compactRowHTML).join('')}</tbody>
+      </table>`;
+  } else if (currentView === 'kanban') {
+    area.innerHTML = kanbanHTML(list);
+  }
+  updateStats();
+}
+
+function cardHTML(p) {
+  const c = companies.find(x => x.id === p.company) || { name: 'N/A', color: '#888', emoji: '?' };
+  const statusClass = p.status === 'Activa' ? 'status-active' : p.status === 'Mantenimiento' ? 'status-maintenance' : 'status-inactive';
+  const daysSinceMaint = p.maintDate ? Math.floor((new Date() - new Date(p.maintDate)) / 86400000) : null;
+  const maintAlert = daysSinceMaint !== null && daysSinceMaint > 90;
+  return `
+    <div class="printer-card" onclick="openModal('${p.id}')">
+      <div class="card-image">
+        ${p.image ? `<img src="${p.image}" alt="${p.name}">` : '<span class="no-img">🖨️</span>'}
+        <span class="card-status ${statusClass}">${p.status}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-id">${p.code}</div>
+        <div class="card-name">${p.name}</div>
+        <div class="card-dept">📍 ${p.dept || '—'} ${p.location ? '· '+p.location : ''}</div>
+        ${maintAlert ? `<div class="maint-alert" style="margin-bottom:10px">⚠️ Mantenimiento hace ${daysSinceMaint} días</div>` : ''}
+        <div class="card-metrics">
+          <div class="metric">
+            <div class="metric-label">Últ. Mantenimiento</div>
+            <div class="metric-value" style="font-size:11px">${fmtDate(p.maintDate)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Impresiones</div>
+            <div class="metric-value">${fmtNum(p.prints)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Inicialización</div>
+            <div class="metric-value" style="font-size:11px">${fmtDate(p.initDate)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Cierre</div>
+            <div class="metric-value" style="font-size:11px;color:${p.closeDate ? 'var(--red)' : 'var(--text2)'}">${fmtDate(p.closeDate) || '—'}</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="card-company-badge" style="border-color:${c.color}33;color:${c.color}">
+            ${c.emoji} ${c.name}
+          </div>
+          <div class="card-actions">
+            <button class="icon-btn" title="Editar" onclick="event.stopPropagation();openModal('${p.id}')">✏️</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function rowHTML(p) {
+  const c = companies.find(x => x.id === p.company) || { name: 'N/A', color: '#888', emoji: '?' };
+  const statusClass = p.status === 'Activa' ? 'status-active' : p.status === 'Mantenimiento' ? 'status-maintenance' : 'status-inactive';
+  return `
+    <div class="printer-row" onclick="openModal('${p.id}')">
+      <div class="row-img">${p.image ? `<img src="${p.image}">` : '🖨️'}</div>
+      <div>
+        <div style="font-size:13px;font-weight:500">${p.name}</div>
+        <div style="font-size:10px;color:var(--accent)">${p.code}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:${c.color}">${c.emoji} ${c.name}</div>
+        <div style="font-size:10px;color:var(--text2)">${p.dept || '—'}</div>
+      </div>
+      <div style="font-size:11px">${fmtDate(p.maintDate)}</div>
+      <div style="font-size:11px;color:${p.nextMaint ? 'var(--yellow)' : 'var(--text2)'}">${fmtDate(p.nextMaint) || '—'}</div>
+      <div style="font-size:12px">${fmtNum(p.prints)}</div>
+      <div><span class="card-status ${statusClass}" style="position:static">${p.status}</span></div>
+      <div><button class="icon-btn" onclick="event.stopPropagation();openModal('${p.id}')">✏️</button></div>
+    </div>`;
+}
+
+function compactRowHTML(p) {
+  const c = companies.find(x => x.id === p.company) || { name:'N/A', color:'#888', emoji:'?' };
+  const sc = p.status==='Activa'?'status-active':p.status==='Mantenimiento'?'status-maintenance':'status-inactive';
+  const days = p.maintDate ? Math.floor((new Date()-new Date(p.maintDate))/86400000) : null;
+  const warn = days !== null && days > 90;
+  return `<tr onclick="openModal('${p.id}')">
+    <td><span class="c-code">${p.code}</span></td>
+    <td><span class="c-name">${p.name}</span></td>
+    <td><span class="c-muted">${p.model||'—'}</span></td>
+    <td><span class="c-company" style="color:${c.color}">${c.emoji} ${c.name}</span></td>
+    <td><span class="c-muted">${p.dept||'—'}</span></td>
+    <td class="c-num">${fmtNum(p.prints)}</td>
+    <td class="c-date">${warn?`<span class="c-warn">⚠️ ${days}d</span>`:fmtDate(p.maintDate)||'—'}</td>
+    <td class="c-date" style="color:${p.nextMaint?'var(--yellow)':''}">${fmtDate(p.nextMaint)||'—'}</td>
+    <td><span class="card-status ${sc}" style="position:static;white-space:nowrap">${p.status}</span></td>
+  </tr>`;
+}
+
+function kanbanHTML(list) {
+  const cols = [
+    { key:'Activa',        label:'Activas',       color:'var(--green)',  icon:'🟢' },
+    { key:'Mantenimiento', label:'Mantenimiento', color:'var(--yellow)', icon:'🟡' },
+    { key:'Inactiva',      label:'Inactivas',     color:'var(--red)',    icon:'🔴' },
+  ];
+  return `<div class="kanban-board">${cols.map(col=>{
+    const items = list.filter(p=>p.status===col.key);
+    return `<div class="kanban-col">
+      <div class="kanban-col-head" style="color:${col.color};border-left:3px solid ${col.color}">
+        <span>${col.icon} ${col.label}</span>
+        <span class="k-cnt">${items.length}</span>
+      </div>
+      <div class="kanban-cards">
+        ${items.length ? items.map(p=>{
+          const c = companies.find(x=>x.id===p.company)||{name:'N/A',color:'#888',emoji:'?'};
+          const days = p.maintDate?Math.floor((new Date()-new Date(p.maintDate))/86400000):null;
+          const warn = days!==null&&days>90;
+          return `<div class="k-card" onclick="openModal('${p.id}')">
+            <div class="k-code">${p.code}</div>
+            <div class="k-name">${p.name}</div>
+            <div class="k-meta">
+              <span class="k-badge" style="color:${c.color};border-color:${c.color}44">${c.emoji} ${c.name}</span>
+              ${p.dept?`<span class="k-tag">📍 ${p.dept}</span>`:''}
+              ${p.prints?`<span class="k-tag">🖨️ ${fmtNum(p.prints)}</span>`:''}
+              ${warn?`<span class="k-tag" style="color:var(--yellow)">⚠️ ${days}d</span>`:''}
+            </div>
+          </div>`;
+        }).join(''):`<div class="k-empty">Sin impresoras</div>`}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function updateStats() {
+  document.getElementById('total-count').textContent = printers.length + ' impresoras';
+  const maint = printers.filter(p => p.status === 'Mantenimiento').length;
+  document.getElementById('maint-count').textContent = maint + ' mantenimiento';
+}
+
+// ── MODAL ──
+function openModal(id = null) {
+  editingId = id;
+  currentImage = '';
+  const overlay = document.getElementById('modal-overlay');
+  const title = document.getElementById('modal-title');
+  const delBtn = document.getElementById('delete-btn');
+
+  // Populate company select
+  document.getElementById('f-company').innerHTML = companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+  if (id) {
+    const p = printers.find(x => x.id === id);
+    title.textContent = 'Editar Impresora';
+    delBtn.style.display = 'block';
+    document.getElementById('f-id').value = p.code;
+    document.getElementById('f-name').value = p.name;
+    document.getElementById('f-company').value = p.company;
+    document.getElementById('f-dept').value = p.dept;
+    document.getElementById('f-status').value = p.status;
+    document.getElementById('f-model').value = p.model || '';
+    document.getElementById('f-init-date').value = p.initDate || '';
+    document.getElementById('f-close-date').value = p.closeDate || '';
+    document.getElementById('f-maint-date').value = p.maintDate || '';
+    document.getElementById('f-next-maint').value = p.nextMaint || '';
+    document.getElementById('f-prints').value = p.prints || 0;
+    document.getElementById('f-location').value = p.location || '';
+    document.getElementById('f-notes').value = p.notes || '';
+    currentImage = p.image || '';
+    setPreviewImage(currentImage);
+  } else {
+    title.textContent = 'Nueva Impresora';
+    delBtn.style.display = 'none';
+    document.getElementById('f-id').value = 'IMP-00' + (printers.length + 1);
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-company').value = selectedCompany !== 'all' ? selectedCompany : companies[0]?.id || '';
+    document.getElementById('f-dept').value = '';
+    document.getElementById('f-status').value = 'Activa';
+    document.getElementById('f-model').value = '';
+    document.getElementById('f-init-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('f-close-date').value = '';
+    document.getElementById('f-maint-date').value = '';
+    document.getElementById('f-next-maint').value = '';
+    document.getElementById('f-prints').value = 0;
+    document.getElementById('f-location').value = '';
+    document.getElementById('f-notes').value = '';
+    setPreviewImage('');
+  }
+
+  overlay.classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  editingId = null;
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function setPreviewImage(src) {
+  const area = document.getElementById('image-upload-area');
+  const existing = area.querySelector('img.preview-img');
+  if (existing) existing.remove();
+  if (src) {
+    const img = document.createElement('img');
+    img.src = src;
+    img.className = 'preview-img';
+    area.insertBefore(img, area.firstChild);
+    area.classList.add('has-image');
+  } else {
+    area.classList.remove('has-image');
+  }
+}
+
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    currentImage = ev.target.result;
+    setPreviewImage(currentImage);
+  };
+  reader.readAsDataURL(file);
+}
+
+function savePrinter() {
+  const data = {
+    code: document.getElementById('f-id').value.trim(),
+    name: document.getElementById('f-name').value.trim(),
+    company: document.getElementById('f-company').value,
+    dept: document.getElementById('f-dept').value.trim(),
+    status: document.getElementById('f-status').value,
+    model: document.getElementById('f-model').value.trim(),
+    initDate: document.getElementById('f-init-date').value,
+    closeDate: document.getElementById('f-close-date').value,
+    maintDate: document.getElementById('f-maint-date').value,
+    nextMaint: document.getElementById('f-next-maint').value,
+    prints: parseInt(document.getElementById('f-prints').value) || 0,
+    location: document.getElementById('f-location').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+    image: currentImage,
+  };
+
+  if (!data.code || !data.name) { alert('El código y nombre son obligatorios.'); return; }
+
+  if (editingId) {
+    const idx = printers.findIndex(p => p.id === editingId);
+    printers[idx] = { ...printers[idx], ...data };
+  } else {
+    printers.push({ id: 'p' + Date.now(), ...data });
+  }
+
+  closeModal();
+  saveData();
+  renderSidebar();
+  renderPrinters();
+}
+
+function deletePrinter() {
+  if (!confirm('¿Eliminar esta impresora?')) return;
+  printers = printers.filter(p => p.id !== editingId);
+  closeModal();
+  saveData();
+  renderSidebar();
+  renderPrinters();
+}
+
+function deleteCompany() {
+  const co = companies.find(x => x.id === selectedCompany);
+  if (!co) return;
+  const count = printers.filter(p => p.company === co.id).length;
+  const msg = `Estás por eliminar la empresa <strong>${co.emoji} ${co.name}</strong>.`;
+  const warn = count > 0
+    ? `🖨️ Esta empresa tiene <strong>${count} impresora${count>1?'s':''}</strong> registrada${count>1?'s':''}. Al eliminarla, <strong>todas se perderán permanentemente</strong>.`
+    : 'Esta empresa no tiene impresoras registradas. La acción es segura.';
+  showConfirm(
+    `¿Eliminar ${co.emoji} ${co.name}?`,
+    msg,
+    warn,
+    () => {
+      printers = printers.filter(p => p.company !== co.id);
+      companies = companies.filter(x => x.id !== co.id);
+      selectedCompany = 'all';
+      const dBtn = document.getElementById('del-co-btn');
+      if (dBtn) dBtn.style.display = 'none';
+      saveData();
+      renderSidebar();
+      renderPrinters();
+    }
+  );
+}
+
+function showConfirm(title, msg, warn, onOk) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').innerHTML = msg;
+  document.getElementById('confirm-warn').innerHTML = warn;
+  const okBtn = document.getElementById('confirm-ok-btn');
+  okBtn.onclick = () => { closeConfirm(); onOk(); };
+  document.getElementById('confirm-overlay').classList.add('open');
+}
+
+function closeConfirm() {
+  document.getElementById('confirm-overlay').classList.remove('open');
+}
+
+function addCompany() {
+  const name = prompt('Nombre de la nueva empresa:');
+  if (!name || !name.trim()) return;
+  const emoji = prompt('Emoji o ícono para la empresa (ej: 🏢 🏭 🏦 💼):', '🏢') || '🏢';
+  const colors = ['#00e5ff','#7c4dff','#ff6b35','#00e676','#ffd740','#ff5252','#e040fb','#26c6da','#ec407a'];
+  const color = colors[companies.length % colors.length];
+  companies.push({ id: 'c' + Date.now(), name: name.trim(), color, emoji: emoji.trim() });
+  saveData();
+  renderSidebar();
+  renderPrinters();
+}
+
+function setView(v) {
+  currentView = v;
+  ['grid','list','compact','kanban'].forEach(id => {
+    const b = document.getElementById(id+'-btn');
+    if (b) b.classList.toggle('active', v===id);
+  });
+  renderPrinters();
+}
+
+// ── UTILS ──
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function fmtNum(n) {
+  if (!n && n !== 0) return '—';
+  return Number(n).toLocaleString('es');
+}
+
+</script>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-head">
+      <div class="confirm-icon">⚠️</div>
+      <div class="confirm-title" id="confirm-title">¿Eliminar empresa?</div>
+    </div>
+    <div class="confirm-body">
+      <p class="confirm-msg" id="confirm-msg"></p>
+      <div class="confirm-warn" id="confirm-warn"></div>
+    </div>
+    <div class="confirm-footer">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
