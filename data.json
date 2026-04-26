@@ -95,6 +95,12 @@
       "name": "NOTARIA I",
       "color": "#7c4dff",
       "emoji": ""
+    },
+    {
+      "id": "c1777171841576",
+      "name": "REGISTRO CIVIL",
+      "color": "#ff6b35",
+      "emoji": ""
     }
   ],
   "printers": [
