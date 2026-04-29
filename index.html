@@ -86,6 +86,10 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
 
 /* CARD */
 .printer-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .2s;animation:fi .3s ease}
+.printer-card.card-closing{border:4px solid rgba(255,60,60,.85);box-shadow:0 0 14px rgba(255,60,60,.4);animation:fi .3s ease,pulse-red 2s ease-in-out infinite}
+@keyframes pulse-red{0%,100%{box-shadow:0 0 10px rgba(255,60,60,.3)}50%{box-shadow:0 0 28px rgba(255,60,60,.75),0 0 10px rgba(255,60,60,.3)}}
+.printer-card.card-maint{border:4px solid rgba(255,200,0,.85);box-shadow:0 0 14px rgba(255,200,0,.35);animation:fi .3s ease,pulse-yellow 2s ease-in-out infinite}
+@keyframes pulse-yellow{0%,100%{box-shadow:0 0 10px rgba(255,200,0,.25)}50%{box-shadow:0 0 28px rgba(255,200,0,.65),0 0 10px rgba(255,200,0,.25)}}
 @keyframes fi{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 .printer-card:hover{border-color:rgba(0,229,255,.3);transform:translateY(-2px);box-shadow:var(--card-shadow)}
 .card-image{height:130px;background:var(--surface2);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
@@ -104,7 +108,7 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
 .metric-label{font-size:8px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
 .metric-value{font-size:12px;font-weight:500}
 .card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:9px;border-top:1px solid var(--border)}
-.card-company-badge{display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;font-size:9px;border:1px solid var(--border)}
+.card-company-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:18px;font-family:'Syne',sans-serif;font-weight:700;border:1px solid var(--border)}
 .icon-btn{width:27px;height:27px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
 .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
 .maint-alert{background:rgba(255,215,64,.1);border:1px solid rgba(255,215,64,.2);color:var(--yellow);padding:4px 9px;border-radius:6px;font-size:9px;display:flex;align-items:center;gap:4px;margin-bottom:9px}
@@ -118,6 +122,10 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
 
 /* COMPACT TABLE */
 .printers-compact{width:100%;border-collapse:collapse;font-size:12px}
+.printers-compact tbody tr.row-closing{background:rgba(255,60,60,.06);border-left:4px solid rgba(255,60,60,.85);animation:pulse-red-bg 2s ease-in-out infinite}
+.printers-compact tbody tr.row-maint{background:rgba(255,200,0,.06);border-left:4px solid rgba(255,200,0,.85);animation:pulse-yellow-bg 2s ease-in-out infinite}
+@keyframes pulse-red-bg{0%,100%{background:rgba(255,60,60,.05)}50%{background:rgba(255,60,60,.13)}}
+@keyframes pulse-yellow-bg{0%,100%{background:rgba(255,200,0,.05)}50%{background:rgba(255,200,0,.12)}}
 .printers-compact thead th{padding:8px 12px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);font-family:'Syne',sans-serif;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap;position:sticky;top:0;background:var(--bg);z-index:2}
 .printers-compact tbody tr{border-bottom:1px solid rgba(37,42,56,.5);cursor:pointer;transition:background .12s}
 .printers-compact tbody tr:hover{background:rgba(0,229,255,.04)}
@@ -138,6 +146,8 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
 .k-cnt{background:var(--surface2);border-radius:999px;padding:2px 8px;font-size:9px;color:var(--text2);font-family:'DM Mono',monospace}
 .kanban-cards{padding:9px;display:flex;flex-direction:column;gap:7px;min-height:50px}
 .k-card{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;cursor:pointer;transition:all .15s}
+.k-card.card-closing,.printer-row.card-closing{border:4px solid rgba(255,60,60,.85)!important;box-shadow:0 0 14px rgba(255,60,60,.4);animation:pulse-red 2s ease-in-out infinite}
+.k-card.card-maint,.printer-row.card-maint{border:4px solid rgba(255,200,0,.85)!important;box-shadow:0 0 14px rgba(255,200,0,.35);animation:pulse-yellow 2s ease-in-out infinite}
 .k-card:hover{border-color:rgba(0,229,255,.35);transform:translateY(-1px)}
 .k-code{font-size:8px;color:var(--accent);letter-spacing:1px;margin-bottom:2px}
 .k-name{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;line-height:1.3;margin-bottom:5px}
@@ -594,15 +604,15 @@ function dc(p) { return p.closeDate ? Math.floor((new Date(p.closeDate)-new Date
 
 function cardHTML(p) {
   const c=co(p), d=ds(p), wa=d!==null&&d>120;
-  const cl=dc(p), ca=cl!==null&&cl<=30; // cierre alert: ≤30 días
+  const cl=dc(p), ca=cl!==null&&cl<=0&&cl>=-30; // alerta: dentro de los 30d posteriores al cierre
   const editBtn = isAuth ? `<button class="icon-btn" onclick="event.stopPropagation();openModal('${p.id}')">✏️</button>` : '';
-  return `<div class="printer-card" onclick="${isAuth?`openModal('${p.id}')`:`openView('${p.id}')`}" style="cursor:pointer">
+  return `<div class="printer-card${ca?' card-closing':wa?' card-maint':''}" onclick="${isAuth?`openModal('${p.id}')`:`openView('${p.id}')`}" style="cursor:pointer">
     <div class="card-image">${p.image?`<img src="${p.image}" alt="">`:'<span class="no-img">🖨️</span>'}<span class="card-status ${sc(p)}">${p.status}</span></div>
     <div class="card-body">
       <div class="card-id">${p.code}</div><div class="card-name">${p.name}</div>
       <div class="card-dept">📍 ${p.dept||'—'}${p.location?' · '+p.location:''}</div>
       ${wa?`<div class="maint-alert">⚠️ Mant. hace ${d} días</div>`:''}
-      ${ca?`<div class="maint-alert" style="background:rgba(255,82,82,.12);border-color:rgba(255,82,82,.3);color:var(--red)">🔴 Cierre en ${cl<=0?'¡HOY!':cl+' días'}</div>`:''}
+      ${ca?`<div class="maint-alert" style="background:rgba(255,82,82,.12);border-color:rgba(255,82,82,.3);color:var(--red)">🔴 ${cl===0?'Cierre hoy':'Cerrado hace '+Math.abs(cl)+'d'}</div>`:''}
       <div class="card-metrics">
         <div class="metric"><div class="metric-label">Últ.Mant.</div><div class="metric-value" style="font-size:11px">${fmtD(p.maintDate)||'—'}</div></div>
         <div class="metric"><div class="metric-label">Impresiones</div><div class="metric-value">${fmtN(p.prints)}</div></div>
@@ -618,11 +628,12 @@ function cardHTML(p) {
 }
 
 function rowHTML(p) {
-  const c=co(p);
+  const c=co(p), d=ds(p), wa=d!==null&&d>120;
+  const cl=dc(p), ca=cl!==null&&cl<=0&&cl>=-30;
   const editBtn = isAuth ? `<button class="icon-btn" onclick="event.stopPropagation();openModal('${p.id}')">✏️</button>` : '';
-  return `<div class="printer-row" onclick="${isAuth?`openModal('${p.id}')`:`openView('${p.id}')`}" style="cursor:pointer">
+  return `<div class="printer-row${ca?' card-closing':wa?' card-maint':''}" onclick="${isAuth?`openModal('${p.id}')`:`openView('${p.id}')`}" style="cursor:pointer">
     <div class="row-img">${p.image?`<img src="${p.image}">`:'🖨️'}</div>
-    <div><div style="font-size:12px;font-weight:500">${p.name}</div><div style="font-size:9px;color:var(--accent)">${p.code}</div></div>
+    <div><div style="font-size:12px;font-weight:500">${p.name}</div><div style="font-size:9px;color:var(--accent)">${p.code}</div>${wa?'<div style="font-size:9px;color:var(--yellow);margin-top:2px">⚠️ Mant. hace '+d+'d</div>':''}${ca?'<div style="font-size:9px;color:var(--red);margin-top:2px">🔴 Cerrado hace '+Math.abs(cl)+'d</div>':''}</div>
     <div><div style="font-size:11px;color:${c.color}"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;flex-shrink:0;vertical-align:middle"></span>${c.name}</div><div style="font-size:9px;color:var(--text2)">${p.dept||'—'}</div></div>
     <div style="font-size:10px">${fmtD(p.maintDate)||'—'}</div>
     <div style="font-size:10px;color:${p.nextMaint?'var(--yellow)':'var(--text2)'}">${fmtD(p.nextMaint)||'—'}</div>
@@ -634,8 +645,10 @@ function rowHTML(p) {
 
 function compactHTML(p) {
   const c=co(p), d=ds(p), wa=d!==null&&d>120;
+  const cl=dc(p), ca=cl!==null&&cl<=0&&cl>=-30;
   const click = isAuth ? `onclick="openModal('${p.id}')"` : `onclick="openView('${p.id}')"` ;
-  return `<tr ${click}>
+  const rowClass = ca ? 'row-closing' : wa ? 'row-maint' : '';
+  return `<tr class="${rowClass}" ${click}>
     <td><span class="c-code">${p.code}</span></td><td><span class="c-name">${p.name}</span></td>
     <td><span class="c-muted">${p.model||'—'}</span></td>
     <td><span class="c-company" style="color:${c.color}"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;vertical-align:middle"></span>${c.name}</span></td>
@@ -655,13 +668,14 @@ function kanbanHTML(list) {
       <div class="kanban-col-head" style="color:${col.color};border-left:3px solid ${col.color}"><span>${col.icon} ${col.label}</span><span class="k-cnt">${items.length}</span></div>
       <div class="kanban-cards">${items.length?items.map(p=>{
         const c=co(p), d=ds(p), wa=d!==null&&d>120;
-        const click = isAuth?`onclick="openModal('${p.id}')"`:'style="cursor:default"';
-        return `<div class="k-card" ${click}><div class="k-code">${p.code}</div><div class="k-name">${p.name}</div>
+        const cl=dc(p), ca=cl!==null&&cl<=0&&cl>=-30;
+        const click = isAuth?`onclick="openModal('${p.id}')"` : `onclick="openView('${p.id}')"`;
+        return `<div class="k-card${ca?' card-closing':wa?' card-maint':''}" ${click}><div class="k-code">${p.code}</div><div class="k-name">${p.name}</div>
           <div class="k-meta">
             <span class="k-badge" style="color:${c.color};border-color:${c.color}44"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;vertical-align:middle"></span>${c.name}</span>
             ${p.dept?`<span class="k-tag">📍 ${p.dept}</span>`:''}
             ${p.prints?`<span class="k-tag">🖨️ ${fmtN(p.prints)}</span>`:''}
-            ${wa?`<span class="k-tag" style="color:var(--yellow)">⚠️ ${d}d</span>`:''}
+            ${wa?`<span class="k-tag" style="color:var(--yellow)">⚠️ Mant. ${d}d</span>`:''}${ca?`<span class="k-tag" style="color:var(--red)">🔴 Cierre ${Math.abs(cl)}d</span>`:''}
           </div></div>`;
       }).join(''):`<div class="k-empty">Sin impresoras</div>`}</div>
     </div>`;
@@ -1046,7 +1060,7 @@ function openView(id) {
   const d = ds(p);
   const wa = d !== null && d > 120;
   const daysUntilNext = p.nextMaint ? Math.floor((new Date(p.nextMaint) - new Date()) / 86400000) : null;
-  const cl = dc(p), ca = cl !== null && cl <= 30;
+  const cl = dc(p), ca = cl !== null && cl <= 0 && cl >= -30; // alerta: 30d posteriores al cierre
   const nextOverdue   = daysUntilNext !== null && daysUntilNext < 0;
   const nextSoon      = daysUntilNext !== null && daysUntilNext >= 0 && daysUntilNext <= 15;
 
@@ -1103,7 +1117,7 @@ function openView(id) {
         <span style="font-size:8px;font-family:'Syne',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--accent)">Fechas</span>
       </div>
       ${vCell('Inicialización', fmtD(p.initDate))}
-      ${vCell('Cierre', fmtD(p.closeDate)+(ca?' ⚠️':''), ca?'var(--red)':p.closeDate?'var(--yellow)':'')}
+      ${vCell('Cierre', fmtD(p.closeDate)+(ca?' 🔴':''), ca?'var(--red)':p.closeDate?'var(--text)':'')}
       ${vCell('Último Mant.', fmtD(p.maintDate), wa?'var(--yellow)':'')}
       ${vCell('Próximo Mant.', fmtD(p.nextMaint), nextOverdue?'var(--red)':nextSoon?'var(--yellow)':'')}
 
@@ -1119,7 +1133,7 @@ function openView(id) {
     <!-- Alertas -->
     ${(wa || nextOverdue || nextSoon || ca) ? `
     <div style="padding:10px 12px;display:flex;flex-direction:column;gap:7px">
-      ${ca ? `<div style="background:rgba(255,82,82,.07);border:1px solid rgba(255,82,82,.3);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--red)">🔴 ${cl<=0?'¡Contrato vencido hoy!':'Contrato cierra en <strong>'+cl+' días</strong>'}</div>` : ''}
+      ${ca ? `<div style="background:rgba(255,82,82,.07);border:1px solid rgba(255,82,82,.3);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--red)">🔴 ${cl===0?'<strong>¡Cierre registrado hoy!</strong>':'Equipo cerrado hace <strong>'+Math.abs(cl)+' días</strong> — período de seguimiento activo'}</div>` : ''}
       ${wa ? `<div style="background:rgba(255,200,0,.07);border:1px solid rgba(255,200,0,.3);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--yellow)">⚠️ Último mant. hace <strong>${d} días</strong> — supera los 120 días recomendados</div>` : ''}
       ${nextOverdue ? `<div style="background:rgba(255,82,82,.07);border:1px solid rgba(255,82,82,.3);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--red)">🚨 Próximo mant. venció hace <strong>${Math.abs(daysUntilNext)} días</strong></div>` : ''}
       ${nextSoon ? `<div style="background:rgba(255,200,0,.07);border:1px solid rgba(255,200,0,.3);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--yellow)">⏰ Próximo mant. en <strong>${daysUntilNext} días</strong></div>` : ''}
