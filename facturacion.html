@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>LHAMAT Ctrl+P · Facturación</title>
+<meta name="theme-color" content="#0a0c10">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── THEMES (same as index) ── */
+:root{--bg:#0a0c10;--surface:#12151c;--surface2:#1a1e28;--border:#252a38;--accent:#00e5ff;--accent2:#7c4dff;--accent3:#ff6b35;--text:#e8eaf0;--text2:#8892a4;--green:#00e676;--red:#ff5252;--yellow:#ffd740;--card-shadow:0 4px 24px rgba(0,0,0,.5);--hbg:rgba(10,12,16,.9);--mo:rgba(0,0,0,.75);--sb:#252a38}
+[data-theme=light]{--bg:#f0f2f7;--surface:#fff;--surface2:#e8ecf5;--border:#d0d6e8;--accent:#0077cc;--accent2:#6633cc;--accent3:#e05a20;--text:#1a1e2e;--text2:#5a6480;--green:#00a854;--red:#d93025;--yellow:#c87d00;--card-shadow:0 4px 20px rgba(0,0,0,.08);--hbg:rgba(240,242,247,.95);--mo:rgba(0,0,0,.45);--sb:#c8cfe0}
+[data-theme=night]{--bg:#040507;--surface:#090c14;--surface2:#0f1220;--border:#1a1f30;--accent:#b388ff;--accent2:#ea80fc;--accent3:#ff9e80;--text:#dce0f0;--text2:#6872a0;--green:#69f0ae;--red:#ff6e6e;--yellow:#ffe57f;--card-shadow:0 4px 32px rgba(0,0,0,.8);--hbg:rgba(4,5,7,.96);--mo:rgba(0,0,0,.88);--sb:#1a1f30}
+[data-theme=beige]{--bg:#f5efe6;--surface:#faf6f0;--surface2:#ede5d8;--border:#d8cbbf;--accent:#8b5e3c;--accent2:#b07c3e;--accent3:#c0562a;--text:#2c1f12;--text2:#7a6555;--green:#4a7c59;--red:#a8392d;--yellow:#a07000;--card-shadow:0 4px 20px rgba(80,50,20,.12);--hbg:rgba(245,239,230,.95);--mo:rgba(30,15,5,.55);--sb:#c8b9a8}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;background-image:url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAS0AAAD6CAYAAAD0rxHNAAAASklEQVR4nO3BMQEAAADCoPVP7WsIoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAMBxAABOgAAAABJRU5ErkJggg==');background-repeat:repeat;background-size:200px auto;opacity:0.35;pointer-events:none;z-index:0}
+
+/* HEADER */
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:var(--hbg);backdrop-filter:blur(12px);gap:8px;flex-wrap:wrap;flex-shrink:0}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none}
+.logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 16px rgba(0,229,255,.3)}
+.logo-text{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-2px;color:var(--text)}
+.logo-text span{color:var(--accent)}
+.logo-sub{font-size:9px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-top:-2px}
+.header-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.stat-pill{display:flex;align-items:center;gap:6px;padding:5px 11px;background:var(--surface);border:1px solid var(--border);border-radius:999px;font-size:10px;color:var(--text2)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.theme-sw{display:flex;align-items:center;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px}
+.tbtn{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:none;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.tbtn:hover{transform:scale(1.15)}
+.tbtn.on{border-color:var(--accent);background:rgba(128,128,128,.12)}
+.hbtn{display:flex;align-items:center;gap:5px;padding:7px 13px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:8px;color:#000;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;text-decoration:none}
+.hbtn:hover{transform:translateY(-1px)}
+.hbtn.ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.hbtn.danger{background:rgba(255,82,82,.12);border:1px solid rgba(255,82,82,.3);color:var(--red)}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--surface);border-bottom:1px solid var(--border);padding:0 14px;flex-shrink:0;overflow-x:auto;position:relative;z-index:5}
+.tab{padding:10px 14px;font-size:11px;font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.5px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* LAYOUT */
+.app{flex:1;overflow:hidden;position:relative;z-index:1;display:flex;flex-direction:column}
+.section{display:none;flex:1;overflow-y:auto;padding:16px}
+.section.active{display:block}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
+.card-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+
+/* STATS */
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.stat-label{font-size:8px;color:var(--text2);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.stat-value{font-size:22px;font-weight:500;font-family:'DM Mono',monospace}
+.stat-unit{font-size:11px;color:var(--text2);margin-left:4px}
+.stat-card.ac .stat-value{color:var(--accent)}
+.stat-card.wa .stat-value{color:var(--yellow)}
+.stat-card.gr .stat-value{color:var(--green)}
+.stat-card.re .stat-value{color:var(--red)}
+
+/* FORMS */
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.form-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);font-family:'Syne',sans-serif;font-weight:600}
+.form-input,.form-select,.form-textarea{padding:9px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;transition:border-color .15s;width:100%}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,229,255,.08)}
+.form-textarea{resize:vertical;min-height:65px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row.g3{grid-template-columns:1fr 1fr 1fr}
+.form-row.g4{grid-template-columns:repeat(4,1fr)}
+
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;cursor:pointer;border:none;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000}
+.btn-primary:hover{transform:translateY(-1px)}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text2)}
+.btn-danger{background:rgba(255,82,82,.12);color:var(--red);border:1px solid rgba(255,82,82,.3)}
+.btn-danger:hover{background:rgba(255,82,82,.2)}
+.btn-warn{background:rgba(255,215,64,.1);color:var(--yellow);border:1px solid rgba(255,215,64,.25)}
+.btn-sm{padding:4px 10px;font-size:10px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{padding:8px 10px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);font-family:'Syne',sans-serif;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody td{padding:8px 10px;border-bottom:1px solid rgba(37,42,56,.5);vertical-align:middle}
+tbody tr:hover td{background:rgba(0,229,255,.03)}
+tbody tr:last-child td{border-bottom:none}
+.td-num{text-align:right;font-family:'DM Mono',monospace}
+.td-mono{font-family:'DM Mono',monospace;font-size:11px}
+.td-code{color:var(--accent);font-size:9px;letter-spacing:1px}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;font-size:9px;font-weight:700;font-family:'Syne',sans-serif;letter-spacing:.5px}
+.badge-ok{background:rgba(0,230,118,.12);color:var(--green);border:1px solid rgba(0,230,118,.25)}
+.badge-pending{background:rgba(255,215,64,.12);color:var(--yellow);border:1px solid rgba(255,215,64,.25)}
+.badge-purple{background:rgba(124,77,255,.12);color:var(--accent2);border:1px solid rgba(124,77,255,.25)}
+
+/* NEXT-CLOSE BANNER */
+.close-banner{background:linear-gradient(135deg,var(--surface),var(--surface2));border:1px solid var(--border);border-radius:14px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.close-banner.urgent{border-color:rgba(255,82,82,.4);background:rgba(255,82,82,.05)}
+.close-banner.soon{border-color:rgba(255,215,64,.35);background:rgba(255,215,64,.04)}
+.cb-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:3px}
+.cb-company{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.cb-date{font-size:10px;color:var(--text2);margin-top:2px}
+.cb-days{font-size:36px;font-weight:300;font-family:'DM Mono',monospace}
+.cb-days.urgent{color:var(--red)}
+.cb-days.soon{color:var(--yellow)}
+.cb-days.ok{color:var(--green)}
+
+/* CIERRE BLOCK ENGINE */
+.cblock{border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;background:var(--surface)}
+.cblock-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.cblock-dept-input{background:transparent;border:none;outline:none;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--text);width:60%}
+.cblock-total{font-size:12px;font-family:'DM Mono',monospace;color:var(--accent)}
+.cblock-body{padding:10px 12px}
+.seg-labels{display:grid;grid-template-columns:2fr 1.2fr 1.2fr 0.9fr 28px;gap:6px;margin-bottom:4px}
+.seg-label{font-size:8px;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
+.seg-row{display:grid;grid-template-columns:2fr 1.2fr 1.2fr 0.9fr 28px;gap:6px;align-items:center;margin-bottom:6px}
+.seg-diff{font-size:13px;font-weight:600;font-family:'DM Mono',monospace;text-align:right;color:var(--accent)}
+.add-seg-btn{font-size:10px;color:var(--accent);background:none;border:1px dashed rgba(0,229,255,.3);padding:4px 9px;border-radius:6px;cursor:pointer;font-family:'DM Mono',monospace}
+.add-seg-btn:hover{background:rgba(0,229,255,.06)}
+.extra-row{display:grid;grid-template-columns:2fr 1fr 28px;gap:6px;align-items:center;margin-bottom:6px}
+.total-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:8px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:var(--mo);backdrop-filter:blur(6px);z-index:100;display:none;align-items:center;justify-content:center;padding:12px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:700px;max-height:95vh;overflow-y:auto;animation:su .25s ease}
+@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
+.modal-close{width:30px;height:30px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
+.modal-close:hover{border-color:var(--red);color:var(--red)}
+.modal-body{padding:20px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--border)}
+
+/* INVOICE PREVIEW */
+.inv-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;font-size:12px;line-height:1.7}
+.inv-head{display:flex;justify-content:space-between;margin-bottom:20px;border-bottom:2px solid var(--text);padding-bottom:12px}
+.inv-title-txt{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+.inv-num{font-size:11px;color:var(--accent);font-family:'DM Mono',monospace}
+.inv-parties{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.ipl{font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);margin-bottom:5px;border-bottom:1px solid var(--border);padding-bottom:3px}
+.ipn{font-weight:700;font-size:13px;font-family:'Syne',sans-serif;margin-bottom:2px}
+.ipd{color:var(--text2);font-size:10px}
+.inv-table{width:100%;border-collapse:collapse;margin:12px 0}
+.inv-table th{background:var(--surface2);color:var(--text2);padding:6px 8px;font-size:9px;text-align:left;font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border)}
+.inv-table td{padding:6px 8px;border-bottom:1px solid var(--border);font-size:11px}
+.inv-table .tr-sub td{font-weight:700;background:var(--surface2);font-family:'DM Mono',monospace}
+.inv-table .tr-tot td{font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-family:'DM Mono',monospace}
+.inv-sigs{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px;padding-top:14px;border-top:1px solid var(--border)}
+.sig-line{border-bottom:1px solid var(--text);margin-bottom:5px;height:28px}
+.bank-note{background:var(--surface2);border-left:3px solid var(--border);padding:8px 12px;font-size:10px;color:var(--text2);margin-top:12px;border-radius:0 6px 6px 0}
+
+/* EMPTY */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;color:var(--text2);text-align:center;gap:8px}
+.empty-icon{font-size:40px;opacity:.3}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--sb);border-radius:10px}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);box-shadow:var(--card-shadow);z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:var(--red);color:var(--red)}
+
+/* PRINT */
+@media print{
+  header,.tabs,.btn,.btn-row,.no-print{display:none!important}
+  body{background:#fff!important;overflow:visible!important}
+  .section{display:block!important;overflow:visible!important}
+  .inv-wrap{border:none;padding:0}
+  .inv-table .tr-tot td{background:#333!important;color:#fff!important;-webkit-print-color-adjust:exact}
+}
+
+/* Light/beige fixes */
+[data-theme=light] .btn-primary,[data-theme=beige] .btn-primary{color:#fff}
+[data-theme=light] .inv-table .tr-tot td,[data-theme=beige] .inv-table .tr-tot td{color:#fff}
+
+@media(max-width:600px){
+  .grid2,.grid3,.grid4{grid-template-columns:1fr}
+  .form-row,.form-row.g3,.form-row.g4{grid-template-columns:1fr}
+  .inv-parties,.inv-sigs{grid-template-columns:1fr}
+  .seg-labels,.seg-row{grid-template-columns:2fr 1fr 1fr 0.8fr 24px}
+}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<header>
+  <a class="logo" href="index.html" title="Volver a Ctrl+P">
+    <div class="logo-icon">🖨️</div>
+    <div>
+      <div class="logo-text">Ctrl<span>+P</span></div>
+      <div class="logo-sub">Facturación</div>
+    </div>
+  </a>
+  <div class="header-right">
+    <div class="stat-pill"><div class="dot"></div><span id="hdr-empresas">0 empresas</span></div>
+    <div class="stat-pill" style="color:var(--yellow)">📅 <span id="hdr-cierres">0 cierres</span></div>
+    <div class="theme-sw">
+      <button class="tbtn on" id="th-cyber"  onclick="setTheme('cyber')"  title="Cyber">🌌</button>
+      <button class="tbtn"    id="th-night"  onclick="setTheme('night')"  title="Noche">🌙</button>
+      <button class="tbtn"    id="th-light"  onclick="setTheme('light')"  title="Claro">☀️</button>
+      <button class="tbtn"    id="th-beige"  onclick="setTheme('beige')"  title="Beige">📜</button>
+    </div>
+    <a class="hbtn ghost" href="index.html">← Impresoras</a>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('dashboard',this)">📊 Dashboard</div>
+  <div class="tab" onclick="showTab('empresas',this)">🏢 Empresas</div>
+  <div class="tab" onclick="showTab('cierres',this)">📅 Cierres</div>
+  <div class="tab" onclick="showTab('factura',this)">📄 Factura</div>
+  <div class="tab" onclick="showTab('impuestos',this)">💰 Impuestos</div>
+</div>
+
+<div class="app">
+  <div id="tab-dashboard" class="section active"></div>
+  <div id="tab-empresas"  class="section"></div>
+  <div id="tab-cierres"   class="section"></div>
+  <div id="tab-factura"   class="section"></div>
+  <div id="tab-impuestos" class="section"></div>
+</div>
+
+<!-- ── MODAL: EMPRESA ── -->
+<div class="modal-overlay" id="modal-emp">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title" id="emp-modal-title">Nueva Empresa</div>
+    <button class="modal-close" onclick="closeOverlay('modal-emp')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-input" id="e-nombre" placeholder="Unidad No. 2 de Aseguramiento..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">NIT</label><input class="form-input" id="e-nit" placeholder="12001113886"></div>
+      <div class="form-group"><label class="form-label">REEUP</label><input class="form-input" id="e-reeup" placeholder="321-1-09340"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Dirección</label><input class="form-input" id="e-dir" placeholder="Calle 27 No. 28..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="e-tel" placeholder="52878123"></div>
+      <div class="form-group"><label class="form-label">Precio / hoja (CUP)</label><input class="form-input" type="number" id="e-precio" value="8" step="0.01"></div>
+    </div>
+    <div class="form-row g3">
+      <div class="form-group"><label class="form-label">Responsable económico</label><input class="form-input" id="e-resp" placeholder="Nombre completo"></div>
+      <div class="form-group"><label class="form-label">CI responsable</label><input class="form-input" id="e-ci" placeholder="67031114299"></div>
+      <div class="form-group"><label class="form-label">Cargo</label><input class="form-input" id="e-cargo" placeholder="J´ Dpto. Económico"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Departamentos (uno por línea)</label><textarea class="form-textarea" id="e-deptos" rows="4" placeholder="DIRECCION&#10;ECONOMIA&#10;TRANSPORTE"></textarea></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Día habitual de cierre</label><input class="form-input" type="number" id="e-dia" value="28" min="1" max="31"></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeOverlay('modal-emp')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveEmpresa()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- ── MODAL: CIERRE ── -->
+<div class="modal-overlay" id="modal-cierre">
+<div class="modal" style="max-width:780px">
+  <div class="modal-header">
+    <div class="modal-title">Registrar Cierre Mensual</div>
+    <button class="modal-close" onclick="closeOverlay('modal-cierre')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="form-row g3">
+      <div class="form-group"><label class="form-label">Empresa</label><select class="form-select" id="c-emp" onchange="onCierreEmpChange()"></select></div>
+      <div class="form-group"><label class="form-label">Mes / Año</label><input class="form-input" type="month" id="c-mes"></div>
+      <div class="form-group"><label class="form-label">Fecha de cierre</label><input class="form-input" type="date" id="c-fecha"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">N° Factura (opcional)</label><input class="form-input" id="c-facnum" placeholder="32"></div>
+    </div>
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">Lecturas de contadores</div>
+    <div id="c-blocks"></div>
+    <div class="btn-row" style="margin-bottom:8px">
+      <button class="btn btn-ghost btn-sm" onclick="addCierreDepto()">+ Departamento</button>
+      <button class="btn btn-warn btn-sm" onclick="addCierreExtra('TCP — Modelos oficiales')">+ Modelos TCP</button>
+      <button class="btn btn-ghost btn-sm" onclick="addCierreExtra('Otro concepto')">+ Otro concepto</button>
+    </div>
+    <div class="total-box" id="c-total-box"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeOverlay('modal-cierre')">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveCierre()">💾 Guardar cierre</button>
+  </div>
+</div>
+</div>
+
+<!-- ── MODAL: DETALLE CIERRE ── -->
+<div class="modal-overlay" id="modal-detail">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">Detalle del Cierre</div>
+    <button class="modal-close" onclick="closeOverlay('modal-detail')">✕</button>
+  </div>
+  <div class="modal-body" id="detail-body"></div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════
+//  THEME (mirrors index.html)
+// ═══════════════════════════════════
+const THEME_KEY='pctrl_theme';
+function setTheme(t){
+  const map={'cyber':undefined,'night':'night','light':'light','beige':'beige'};
+  if(map[t]===undefined)document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme',map[t]);
+  localStorage.setItem(THEME_KEY,t);
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('on'));
+  const el=document.getElementById('th-'+t);
+  if(el)el.classList.add('on');
+}
+(function(){const t=localStorage.getItem(THEME_KEY)||'cyber';setTheme(t);})();
+
+// ═══════════════════════════════════
+//  DATA STORE (localStorage only — facturas.json concept)
+// ═══════════════════════════════════
+const FAC_KEY='pctrl_fac_v1';
+
+function defaultDB(){
+  return{
+    prestador:{nombre:'Lisandro Hernández Amat',nit:'77060120021',direccion:'Morales Lemus No. 128 / Frexes y Aguilera',cuenta:'1268470002314411',banco:'Banco Popular de Ahorro',categoria:'Mecanógrafo'},
+    empresas:[
+      {id:'c1777171186528',nombre:'FISCALIA',nit:'',reeup:'',direccion:'Holguín',tel:'',responsable:'',ci:'',cargo:'',precio:8,diaCierre:28,deptos:['Dirección','Economía']},
+      {id:'c1777171231232',nombre:'UHO Universidad',nit:'',reeup:'',direccion:'Holguín',tel:'',responsable:'',ci:'',cargo:'',precio:8,diaCierre:28,deptos:['Dirección','Economía','RRHH','Informática']},
+      {id:'c1777171322945',nombre:'UNIDAD "2"',nit:'12001113886',reeup:'321-1-09340',direccion:'calle 27 No. 28 / 4ta y 6ta, Rpto Lenin, Holguín',tel:'52878123',responsable:'Marlenis Rodríguez Mulet',ci:'67031114299',cargo:'J´ Dpto. Económico',precio:8,diaCierre:28,deptos:['Dirección Molienda Unidad 2','Economía Unidad 2','Fomento Transporte','DPV DIRECCION','DPV INVERSIONES']}
+    ],
+    cierres:[],
+    facturas:[]
+  };
+}
+
+let db;
+function loadDB(){
+  try{const r=localStorage.getItem(FAC_KEY);if(r)return JSON.parse(r);}catch(e){}
+  return defaultDB();
+}
+function saveDB(){localStorage.setItem(FAC_KEY,JSON.stringify(db));}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+db=loadDB();
+
+// Sync companies from data.json (GitHub) if available
+async function syncCompanies(){
+  try{
+    const GH_USER='lhamat123',GH_REPO='CtrlP',GH_FILE='data.json';
+    const url=`https://raw.githubusercontent.com/${GH_USER}/${GH_REPO}/main/${GH_FILE}`;
+    const r=await fetch(url+'?_='+Date.now());
+    if(!r.ok)return;
+    const data=await r.json();
+    if(data.companies&&data.companies.length){
+      // Upsert companies from index's data.json
+      data.companies.forEach(c=>{
+        if(!db.empresas.find(e=>e.id===c.id)){
+          db.empresas.push({
+            id:c.id,nombre:c.name,nit:'',reeup:'',direccion:'',tel:'',
+            responsable:'',ci:'',cargo:'',precio:8,diaCierre:28,
+            deptos:['Dirección','Economía']
+          });
+        }else{
+          // Update name if changed
+          const e=db.empresas.find(e=>e.id===c.id);
+          if(e)e.nombre=c.name;
+        }
+      });
+      saveDB();
+      updateHeader();
+    }
+  }catch(e){}
+}
+
+// ═══ UTILS ═══
+const fmt=n=>Number(n).toLocaleString('es-CU',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtI=n=>Math.round(Number(n)).toLocaleString('es-CU');
+function fmtD(d){if(!d)return'';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('es-CU',{day:'2-digit',month:'long',year:'numeric'});}
+const today=()=>new Date().toISOString().split('T')[0];
+const thisMonth=()=>new Date().toISOString().slice(0,7);
+const getEmp=id=>db.empresas.find(e=>e.id===id);
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function mesLabel(m){if(!m)return'';const[y,mo]=m.split('-');return MESES[parseInt(mo)-1]+' '+y;}
+function nextClose(emp){
+  if(!emp)return null;
+  const t=new Date(),d=emp.diaCierre||28;
+  let nc=new Date(t.getFullYear(),t.getMonth(),d);
+  if(nc<=t)nc=new Date(t.getFullYear(),t.getMonth()+1,d);
+  return nc;
+}
+function daysUntil(d){const t=new Date();t.setHours(0,0,0,0);return Math.ceil((d-t)/86400000);}
+
+function toast(msg,err=false){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='show'+(err?' err':'');
+  setTimeout(()=>el.className='',2600);
+}
+
+function updateHeader(){
+  document.getElementById('hdr-empresas').textContent=db.empresas.length+' empresas';
+  document.getElementById('hdr-cierres').textContent=db.cierres.length+' cierres';
+}
+
+// ═══ NAV ═══
+function showTab(name,el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+  ({dashboard:renderDashboard,empresas:renderEmpresas,cierres:renderCierres,factura:renderFactura,impuestos:renderImpuestos})[name]();
+}
+
+function openOverlay(id){document.getElementById(id).classList.add('open');}
+function closeOverlay(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(b=>b.addEventListener('click',e=>{if(e.target===b)b.classList.remove('open');}));
+
+// ═══ DASHBOARD ═══
+function renderDashboard(){
+  const el=document.getElementById('tab-dashboard');
+  const closes=db.empresas.map(e=>({emp:e,date:nextClose(e)})).filter(x=>x.date).sort((a,b)=>a.date-b.date);
+  const next=closes[0];
+  let ncHtml='';
+  if(next){
+    const days=daysUntil(next.date);
+    const cls=days<=3?'urgent':days<=7?'soon':'';
+    const daysCls=days<=3?'urgent':days<=7?'soon':'ok';
+    ncHtml=`<div class="close-banner ${cls}">
+      <div><div class="cb-label">Próximo cierre</div><div class="cb-company">${next.emp.nombre}</div>
+      <div class="cb-date">${fmtD(next.date.toISOString().split('T')[0])}</div></div>
+      <div style="text-align:right"><div class="cb-days ${daysCls}">${days}</div><div style="font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:1px">días</div></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    ${closes.slice(1,5).map(c=>{const d=daysUntil(c.date);const bc=d<=3?'badge-danger':d<=7?'badge-pending':'badge-ok';
+      return`<div class="stat-card" style="flex:1;min-width:140px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="font-size:12px;font-weight:600;font-family:'Syne',sans-serif">${c.emp.nombre}</div>
+        <span class="badge ${d<=3?'badge re':'badge-pending'}" style="background:${d<=3?'rgba(255,82,82,.12)':'rgba(255,215,64,.12)'};color:${d<=3?'var(--red)':'var(--yellow)'};border:1px solid ${d<=3?'rgba(255,82,82,.3)':'rgba(255,215,64,.3)'};white-space:nowrap">${d}d</span>
+      </div>`;
+    }).join('')}</div>`;
+  }
+  const cm=thisMonth();
+  const mc=db.cierres.filter(c=>c.mes===cm);
+  const mHojas=mc.reduce((a,c)=>a+(c.totalHojas||0),0);
+  const mImp=mc.reduce((a,c)=>a+(c.totalImporte||0),0);
+  const tImp10=db.cierres.reduce((a,c)=>a+(c.impuesto10||0),0);
+  const tImp05=db.cierres.reduce((a,c)=>a+(c.impuesto05||0),0);
+  const totalAcum=db.cierres.reduce((a,c)=>a+(c.totalImporte||0),0);
+  el.innerHTML=ncHtml+`
+  <div class="grid4" style="margin-bottom:14px">
+    <div class="stat-card ac"><div class="stat-label">Hojas — mes actual</div><div class="stat-value">${fmtI(mHojas)}</div></div>
+    <div class="stat-card gr"><div class="stat-label">Ingreso — mes actual</div><div class="stat-value">${fmt(mImp)}<span class="stat-unit">CUP</span></div></div>
+    <div class="stat-card wa"><div class="stat-label">Imp. 10% acumulado</div><div class="stat-value">${fmt(tImp10)}<span class="stat-unit">CUP</span></div></div>
+    <div class="stat-card re"><div class="stat-label">Imp. 5% acumulado</div><div class="stat-value">${fmt(tImp05)}<span class="stat-unit">CUP</span></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">Mes actual — ${mesLabel(cm)}</div>
+      ${mc.length===0?'<div class="empty-state"><div class="empty-icon">📭</div><div>Sin cierres este mes</div></div>':
+      `<div class="tbl-wrap"><table>
+        <thead><tr><th>Empresa</th><th class="td-num">Hojas</th><th class="td-num">Importe</th><th>Estado</th></tr></thead>
+        <tbody>${mc.map(c=>{const e=getEmp(c.empresaId);return`<tr>
+          <td style="font-weight:600">${e?e.nombre:c.empresaId}</td>
+          <td class="td-num td-mono">${fmtI(c.totalHojas)}</td>
+          <td class="td-num td-mono">${fmt(c.totalImporte)}</td>
+          <td><span class="badge ${c.facturado?'badge-ok':'badge-pending'}">${c.facturado?'Fac.'+c.factura:'Pendiente'}</span></td>
+        </tr>`;}).join('')}</tbody>
+      </table></div>`}
+    </div>
+    <div class="card"><div class="card-title">Actividad reciente</div>
+      ${[...db.cierres].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).slice(0,6).map(c=>{
+        const e=getEmp(c.empresaId);
+        return`<div style="padding:9px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:12px;font-weight:600;font-family:'Syne',sans-serif">${e?e.nombre:c.empresaId}</div>
+          <div style="font-size:9px;color:var(--text2);margin-top:1px">${fmtD(c.fecha)} · ${mesLabel(c.mes)}</div></div>
+          <div style="text-align:right"><div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--accent)">${fmt(c.totalImporte)} CUP</div>
+          <div style="font-size:9px;color:var(--text2)">${fmtI(c.totalHojas)} hojas</div></div>
+        </div>`;
+      }).join('')||'<div class="empty-state"><div class="empty-icon">📊</div><div>Sin actividad</div></div>'}
+    </div>
+  </div>
+  <div class="card"><div class="card-title">Todas las empresas — vista rápida</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Empresa</th><th class="td-num">Precio/hoja</th><th>Día cierre</th><th>Próximo cierre</th><th class="td-num">Cierres</th></tr></thead>
+      <tbody>${db.empresas.map(e=>{const nc=nextClose(e);const days=nc?daysUntil(nc):999;
+        return`<tr>
+          <td style="font-weight:600">${e.nombre}</td>
+          <td class="td-num td-mono">${e.precio} CUP</td>
+          <td class="td-mono" style="color:var(--text2)">día ${e.diaCierre}</td>
+          <td>${nc?`<span class="badge ${days<=3?'':'badge-pending'}" style="${days<=3?'background:rgba(255,82,82,.12);color:var(--red);border:1px solid rgba(255,82,82,.3)':days<=7?'':'background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.25)'}">${days}d</span>
+            <span style="font-size:10px;color:var(--text2);margin-left:6px">${nc.toLocaleDateString('es-CU')}</span>`:'—'}</td>
+          <td class="td-num td-mono">${db.cierres.filter(c=>c.empresaId===e.id).length}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ═══ EMPRESAS ═══
+let _editEmpId=null;
+function renderEmpresas(){
+  const el=document.getElementById('tab-empresas');
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700">Empresas</div>
+    <div style="font-size:10px;color:var(--text2);margin-top:2px">Clientes gestionados</div></div>
+    <button class="btn btn-primary" onclick="openEmpModal()">＋ Nueva empresa</button>
+  </div>
+  <div class="card">
+    ${db.empresas.length===0?'<div class="empty-state"><div class="empty-icon">🏢</div><div>Sin empresas</div></div>':
+    db.empresas.map(e=>`<div style="display:flex;align-items:start;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px;font-family:'Syne',sans-serif">${e.nombre}</div>
+        <div style="font-size:9px;color:var(--text2);font-family:'DM Mono',monospace;margin-top:2px">NIT: ${e.nit||'—'} | REEUP: ${e.reeup||'—'} | Cierre: día ${e.diaCierre}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:3px">${(e.deptos||[]).join(' · ')}</div>
+        ${e.responsable?`<div style="font-size:10px;color:var(--text2);margin-top:2px">${e.responsable}${e.ci?' · CI: '+e.ci:''} · ${e.cargo}</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--accent)">${e.precio} CUP/hoja</div>
+        <button class="btn btn-ghost btn-sm" onclick="openEmpModal('${e.id}')">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="delEmp('${e.id}')">✕</button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+function openEmpModal(id){
+  _editEmpId=id||null;
+  const emp=id?getEmp(id):null;
+  document.getElementById('emp-modal-title').textContent=emp?'Editar Empresa':'Nueva Empresa';
+  document.getElementById('e-nombre').value=emp?emp.nombre:'';
+  document.getElementById('e-nit').value=emp?emp.nit:'';
+  document.getElementById('e-reeup').value=emp?emp.reeup:'';
+  document.getElementById('e-dir').value=emp?emp.direccion:'';
+  document.getElementById('e-tel').value=emp?emp.tel:'';
+  document.getElementById('e-precio').value=emp?emp.precio:8;
+  document.getElementById('e-resp').value=emp?emp.responsable:'';
+  document.getElementById('e-ci').value=emp?emp.ci:'';
+  document.getElementById('e-cargo').value=emp?emp.cargo:'';
+  document.getElementById('e-deptos').value=emp?(emp.deptos||[]).join('\n'):'';
+  document.getElementById('e-dia').value=emp?emp.diaCierre:28;
+  openOverlay('modal-emp');
+}
+
+function saveEmpresa(){
+  const n=document.getElementById('e-nombre').value.trim();
+  if(!n){toast('Nombre requerido',true);return;}
+  const deps=document.getElementById('e-deptos').value.split('\n').map(d=>d.trim()).filter(Boolean);
+  const obj={id:_editEmpId||uid(),nombre:n,
+    nit:document.getElementById('e-nit').value.trim(),
+    reeup:document.getElementById('e-reeup').value.trim(),
+    direccion:document.getElementById('e-dir').value.trim(),
+    tel:document.getElementById('e-tel').value.trim(),
+    responsable:document.getElementById('e-resp').value.trim(),
+    ci:document.getElementById('e-ci').value.trim(),
+    cargo:document.getElementById('e-cargo').value.trim(),
+    precio:parseFloat(document.getElementById('e-precio').value)||8,
+    diaCierre:parseInt(document.getElementById('e-dia').value)||28,
+    deptos:deps.length?deps:['Dirección','Economía']
+  };
+  if(_editEmpId){const i=db.empresas.findIndex(e=>e.id===_editEmpId);if(i>=0)db.empresas[i]=obj;}
+  else db.empresas.push(obj);
+  saveDB();closeOverlay('modal-emp');renderEmpresas();updateHeader();
+  toast('Empresa guardada ✓');
+}
+
+function delEmp(id){
+  if(!confirm('¿Eliminar empresa y todos sus cierres?'))return;
+  db.empresas=db.empresas.filter(e=>e.id!==id);
+  db.cierres=db.cierres.filter(c=>c.empresaId!==id);
+  saveDB();renderEmpresas();updateHeader();toast('Empresa eliminada');
+}
+
+// ═══════════════════════════════════
+//  CIERRE BLOCK ENGINE
+// ═══════════════════════════════════
+let _blockId=0;
+
+function makeBlock(container,dept,segments){
+  const bid='cb'+(++_blockId);
+  const segs=segments||[{printer:'',apertura:'',cierre:'',nota:''}];
+  const div=document.createElement('div');
+  div.id=bid;div.className='cblock';
+  div.innerHTML=`
+    <div class="cblock-head">
+      <input class="cblock-dept-input" value="${dept||''}" placeholder="Departamento / Centro de costo" oninput="recalcBlock('${bid}')">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="cblock-total" id="${bid}-total">0 hojas</span>
+        <button class="btn btn-danger btn-sm" onclick="document.getElementById('${bid}').remove();recalcAll()" style="padding:3px 7px">✕</button>
+      </div>
+    </div>
+    <div class="cblock-body">
+      <div class="seg-labels">
+        <div class="seg-label">Impresora</div>
+        <div class="seg-label" style="text-align:right">Apertura</div>
+        <div class="seg-label" style="text-align:right">Cierre</div>
+        <div class="seg-label" style="text-align:right">Hojas</div>
+        <div></div>
+      </div>
+      <div id="${bid}-segs"></div>
+      <button class="add-seg-btn" onclick="addSegment('${bid}')">+ impresora / sustitución</button>
+    </div>`;
+  container.appendChild(div);
+  segs.forEach(s=>addSegment(bid,s));
+  return bid;
+}
+
+function addSegment(bid,seg){
+  const sid='cs'+(++_blockId);
+  const s=seg||{};
+  const row=document.createElement('div');
+  row.id=sid;row.className='seg-row';
+  row.innerHTML=`
+    <div>
+      <input class="form-input seg-printer" value="${s.printer||''}" placeholder="Epson ET 4150 / modelo" style="font-size:11px;margin-bottom:3px" oninput="recalcBlock('${bid}')">
+      <input class="form-input seg-nota" value="${s.nota||''}" placeholder="nota: sustitución, temporal…" style="font-size:10px;background:var(--surface);opacity:.7">
+    </div>
+    <input class="form-input seg-ap" type="number" value="${s.apertura||''}" placeholder="00000" style="text-align:right;font-size:12px" oninput="recalcBlock('${bid}')">
+    <input class="form-input seg-cl" type="number" value="${s.cierre||''}" placeholder="00000" style="text-align:right;font-size:12px" oninput="recalcBlock('${bid}')">
+    <div class="seg-diff" id="${sid}-diff" style="color:var(--text2)">—</div>
+    <button class="btn btn-danger btn-sm" style="padding:3px 7px;align-self:start" onclick="document.getElementById('${sid}').remove();recalcBlock('${bid}')">✕</button>`;
+  document.getElementById(bid+'-segs').appendChild(row);
+  recalcBlock(bid);
+}
+
+function recalcBlock(bid){
+  const block=document.getElementById(bid);if(!block)return;
+  let total=0;
+  block.querySelectorAll('.seg-row').forEach(row=>{
+    const ap=parseFloat(row.querySelector('.seg-ap').value)||0;
+    const cl=parseFloat(row.querySelector('.seg-cl').value)||0;
+    const diff=cl>0&&ap>0?Math.max(0,cl-ap):0;
+    const dEl=row.querySelector('[id$="-diff"]');
+    if(dEl){dEl.textContent=diff>0?fmtI(diff):'—';dEl.style.color=diff>0?'var(--accent)':'var(--text2)';}
+    total+=diff;
+  });
+  const tot=document.getElementById(bid+'-total');
+  if(tot)tot.textContent=fmtI(total)+' hojas';
+  recalcAll();
+}
+
+function makeExtraRow(container,label){
+  const eid='ce'+(++_blockId);
+  const div=document.createElement('div');
+  div.id=eid;div.className='extra-row';
+  div.innerHTML=`
+    <input class="form-input extra-label" value="${label}" style="font-size:12px;font-weight:600;background:rgba(255,215,64,.07);border-color:rgba(255,215,64,.2)" oninput="recalcAll()">
+    <input class="form-input extra-qty" type="number" value="0" style="text-align:right;font-size:12px;background:rgba(255,215,64,.07);border-color:rgba(255,215,64,.2)" oninput="recalcAll()">
+    <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${eid}').remove();recalcAll()">✕</button>`;
+  container.appendChild(div);recalcAll();
+}
+
+function recalcAll(){
+  const container=document.getElementById('c-blocks');if(!container)return;
+  let total=0;
+  container.querySelectorAll('.cblock').forEach(b=>{
+    b.querySelectorAll('.seg-row').forEach(row=>{
+      const ap=parseFloat(row.querySelector('.seg-ap').value)||0;
+      const cl=parseFloat(row.querySelector('.seg-cl').value)||0;
+      total+=cl>0&&ap>0?Math.max(0,cl-ap):0;
+    });
+  });
+  container.querySelectorAll('.extra-row').forEach(r=>{
+    total+=parseFloat(r.querySelector('.extra-qty').value)||0;
+  });
+  const empId=document.getElementById('c-emp')&&document.getElementById('c-emp').value;
+  const emp=getEmp(empId);
+  const precio=emp?emp.precio:8;
+  const imp=total*precio;
+  const imp10=imp*0.1;
+  const imp05=Math.max(0,(imp-3260)*0.05);
+  const box=document.getElementById('c-total-box');
+  if(box)box.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span style="font-size:12px;color:var(--text2)">Total hojas: <strong style="font-family:'DM Mono',monospace;color:var(--text)">${fmtI(total)}</strong></span>
+      <span style="font-size:12px;color:var(--text2)">Precio: <strong style="font-family:'DM Mono',monospace">${precio} CUP/hoja</strong></span>
+      <span style="font-size:15px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent)">${fmt(imp)} CUP</span>
+    </div>
+    <div style="margin-top:6px;font-size:10px;color:var(--text2);font-family:'DM Mono',monospace">
+      Imp. 10% → <span style="color:var(--yellow)">${fmt(imp10)} CUP</span> &nbsp;|&nbsp; Imp. 5% → <span style="color:var(--red)">${fmt(imp05)} CUP</span>
+    </div>`;
+}
+
+function addCierreDepto(dept,segs){makeBlock(document.getElementById('c-blocks'),dept||'',segs);}
+function addCierreExtra(label){makeExtraRow(document.getElementById('c-blocks'),label);}
+
+function onCierreEmpChange(){
+  const emp=getEmp(document.getElementById('c-emp').value);
+  const blocks=document.getElementById('c-blocks');
+  blocks.innerHTML='';_blockId=0;
+  if(emp)emp.deptos.forEach(d=>addCierreDepto(d));
+  recalcAll();
+}
+
+function openCierreModal(){
+  document.getElementById('c-emp').innerHTML='<option value="">— Seleccionar —</option>'+
+    db.empresas.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('');
+  document.getElementById('c-fecha').value=today();
+  document.getElementById('c-mes').value=thisMonth();
+  document.getElementById('c-facnum').value='';
+  document.getElementById('c-blocks').innerHTML='';_blockId=0;
+  document.getElementById('c-total-box').innerHTML='';
+  openOverlay('modal-cierre');
+}
+
+function collectCierreData(){
+  const container=document.getElementById('c-blocks');
+  const depts=[];
+  container.querySelectorAll('.cblock').forEach(b=>{
+    const dept=b.querySelector('.cblock-dept-input').value.trim();
+    const segments=[];
+    b.querySelectorAll('.seg-row').forEach(row=>{
+      const ap=parseFloat(row.querySelector('.seg-ap').value)||0;
+      const cl=parseFloat(row.querySelector('.seg-cl').value)||0;
+      segments.push({
+        printer:row.querySelector('.seg-printer').value.trim(),
+        nota:row.querySelector('.seg-nota').value.trim(),
+        apertura:ap,cierre:cl,hojas:cl>0&&ap>0?Math.max(0,cl-ap):0
+      });
+    });
+    depts.push({dept,segments,subtotal:segments.reduce((a,s)=>a+s.hojas,0)});
+  });
+  const extras=[];
+  container.querySelectorAll('.extra-row').forEach(r=>{
+    extras.push({label:r.querySelector('.extra-label').value.trim(),qty:parseFloat(r.querySelector('.extra-qty').value)||0});
+  });
+  return{depts,extras};
+}
+
+function saveCierre(){
+  const empId=document.getElementById('c-emp').value;
+  const emp=getEmp(empId);
+  if(!empId||!emp){toast('Seleccione una empresa',true);return;}
+  const mes=document.getElementById('c-mes').value;
+  const fecha=document.getElementById('c-fecha').value;
+  const factura=document.getElementById('c-facnum').value.trim();
+  const{depts,extras}=collectCierreData();
+  const totalHojasDepts=depts.reduce((a,d)=>a+d.subtotal,0);
+  const totalExtra=extras.reduce((a,e)=>a+e.qty,0);
+  const totalHojas=totalHojasDepts+totalExtra;
+  const totalImporte=totalHojas*emp.precio;
+  const imp10=totalImporte*0.1;
+  const imp05=Math.max(0,(totalImporte-3260)*0.05);
+  db.cierres.push({
+    id:uid(),empresaId:empId,mes,fecha,
+    depts,extras,totalHojas,totalImporte,
+    impuesto10:imp10,impuesto05:imp05,
+    factura,facturado:!!factura
+  });
+  saveDB();closeOverlay('modal-cierre');renderCierres();updateHeader();
+  toast('Cierre registrado ✓');
+}
+
+// ═══ CIERRES ═══
+function renderCierres(){
+  const el=document.getElementById('tab-cierres');
+  const sorted=[...db.cierres].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div><div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700">Cierres Mensuales</div>
+    <div style="font-size:10px;color:var(--text2);margin-top:2px">${sorted.length} registros</div></div>
+    <button class="btn btn-primary" onclick="openCierreModal()">＋ Nuevo cierre</button>
+  </div>
+  <div class="card">
+    ${sorted.length===0?'<div class="empty-state"><div class="empty-icon">📅</div><div>Sin cierres registrados</div></div>':
+    `<div class="tbl-wrap"><table>
+      <thead><tr><th>Empresa</th><th>Mes</th><th>Fecha</th><th class="td-num">Hojas</th><th class="td-num">Importe</th><th class="td-num">Imp.10%</th><th class="td-num">Imp.5%</th><th>Factura</th><th></th><th></th></tr></thead>
+      <tbody>${sorted.map(c=>{const e=getEmp(c.empresaId);return`<tr>
+        <td style="font-weight:600">${e?e.nombre:c.empresaId}</td>
+        <td class="td-mono">${mesLabel(c.mes)}</td>
+        <td class="td-mono" style="color:var(--text2);font-size:10px">${fmtD(c.fecha)}</td>
+        <td class="td-num td-mono">${fmtI(c.totalHojas)}</td>
+        <td class="td-num td-mono" style="color:var(--accent)">${fmt(c.totalImporte)}</td>
+        <td class="td-num td-mono" style="color:var(--yellow)">${fmt(c.impuesto10)}</td>
+        <td class="td-num td-mono" style="color:var(--red)">${fmt(c.impuesto05)}</td>
+        <td><span class="badge ${c.facturado?'badge-ok':'badge-pending'}">${c.factura||'—'}</span></td>
+        <td><button class="btn btn-ghost btn-sm" onclick="showCierreDetail('${c.id}')">ver</button></td>
+        <td><button class="btn btn-danger btn-sm" onclick="delCierre('${c.id}')">✕</button></td>
+      </tr>`;}).join('')}</tbody>
+    </table></div>`}
+  </div>`;
+}
+
+function showCierreDetail(id){
+  const c=db.cierres.find(x=>x.id===id);
+  const emp=getEmp(c.empresaId);
+  document.getElementById('detail-body').innerHTML=`
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:3px">${emp?emp.nombre:''}</div>
+    <div style="font-size:9px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px">${mesLabel(c.mes)} · ${fmtD(c.fecha)}</div>
+    ${c.depts.map(d=>`
+      <div style="margin-bottom:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <div style="background:var(--surface2);padding:8px 12px;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;display:flex;justify-content:space-between">
+          <span>${d.dept}</span><span style="color:var(--accent);font-family:'DM Mono',monospace">${fmtI(d.subtotal)} hojas</span>
+        </div>
+        ${d.segments.map(s=>`<div style="padding:6px 12px;border-top:1px solid var(--border);font-size:11px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px">
+          <div><strong>${s.printer||'—'}</strong>${s.nota?`<br><span style="font-size:9px;color:var(--yellow)">${s.nota}</span>`:''}</div>
+          <div style="text-align:right;font-family:'DM Mono',monospace;color:var(--text2)">${s.apertura}</div>
+          <div style="text-align:right;font-family:'DM Mono',monospace;color:var(--text2)">${s.cierre}</div>
+          <div style="text-align:right;font-family:'DM Mono',monospace;font-weight:600;color:var(--accent)">${fmtI(s.hojas)}</div>
+        </div>`).join('')}
+      </div>`).join('')}
+    ${(c.extras||[]).map(e=>`<div style="padding:7px 10px;background:rgba(255,215,64,.07);border:1px solid rgba(255,215,64,.2);border-radius:8px;margin-bottom:6px;display:flex;justify-content:space-between;font-size:11px">
+      <strong>${e.label}</strong><span style="font-family:'DM Mono',monospace">${fmtI(e.qty)} uds</span></div>`).join('')}
+    <div class="total-box" style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--text2)">Total hojas</span><strong style="font-family:'DM Mono',monospace">${fmtI(c.totalHojas)}</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700"><span>Importe</span><span style="font-family:'DM Mono',monospace;color:var(--accent)">${fmt(c.totalImporte)} CUP</span></div>
+      <div style="font-size:10px;color:var(--text2);margin-top:5px;font-family:'DM Mono',monospace">
+        Imp.10%: <span style="color:var(--yellow)">${fmt(c.impuesto10)} CUP</span> &nbsp;|&nbsp; Imp.5%: <span style="color:var(--red)">${fmt(c.impuesto05)} CUP</span>
+      </div>
+    </div>`;
+  openOverlay('modal-detail');
+}
+
+function delCierre(id){
+  if(!confirm('¿Eliminar cierre?'))return;
+  db.cierres=db.cierres.filter(c=>c.id!==id);saveDB();renderCierres();updateHeader();toast('Cierre eliminado');
+}
+
+// ═══ FACTURA ═══
+let _facBlocks=0,_facEditId=null;
+
+function renderFactura(){
+  const el=document.getElementById('tab-factura');
+  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700">Generar Factura</div>
+  </div>
+  <div class="grid2" style="align-items:start">
+    <div>
+      <div class="card">
+        <div class="card-title">Datos de la factura</div>
+        <div class="form-group"><label class="form-label">Empresa cliente</label>
+          <select class="form-select" id="f-emp" onchange="onFacEmpChange()">${'<option value="">— Seleccionar —</option>'+db.empresas.map(e=>`<option value="${e.id}">${e.nombre}</option>`).join('')}</select>
+        </div>
+        <div class="form-row g3">
+          <div class="form-group"><label class="form-label">N° Factura</label><input class="form-input" id="f-num" type="number" value="${db.facturas.length+1}" oninput="buildFac()"></div>
+          <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" id="f-fecha" type="date" value="${today()}" oninput="buildFac()"></div>
+          <div class="form-group"><label class="form-label">Precio/hoja CUP</label><input class="form-input" id="f-precio" type="number" value="8" step="0.01" oninput="buildFac()"></div>
+        </div>
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">Líneas de la factura</div>
+        <div id="f-blocks"></div>
+        <div class="btn-row" style="margin-bottom:10px">
+          <button class="btn btn-ghost btn-sm" onclick="addFacBlock()">+ Departamento</button>
+          <button class="btn btn-warn btn-sm" onclick="addFacExtra('TCP — Modelos oficiales')">+ Modelos TCP</button>
+          <button class="btn btn-ghost btn-sm" onclick="addFacExtra('Otro concepto')">+ Otro</button>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:10px">
+          <div class="form-group"><label class="form-label">Descuento / Reajuste (CUP)</label><input class="form-input" id="f-desc" type="number" value="0" oninput="buildFac()"></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card"><div class="card-title">Vista previa</div><div id="fac-prev"></div>
+        <div class="btn-row no-print">
+          <button class="btn btn-primary" onclick="printFac()">🖨️ Imprimir</button>
+          <button class="btn btn-ghost" onclick="saveFac()">💾 Guardar copia</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  addFacBlock();buildFac();
+}
+
+function onFacEmpChange(){
+  const emp=getEmp(document.getElementById('f-emp').value);
+  if(emp)document.getElementById('f-precio').value=emp.precio;
+  document.getElementById('f-blocks').innerHTML='';_facBlocks=0;
+  if(emp)emp.deptos.forEach(d=>addFacBlock(d,0));
+  buildFac();
+}
+
+function addFacBlock(dept,qty){
+  const id='fb'+(++_facBlocks);
+  const div=document.createElement('div');
+  div.id=id;div.style.cssText='display:grid;grid-template-columns:2fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px';
+  div.innerHTML=`
+    <input class="form-input fb-dept" type="text" value="${dept||''}" placeholder="Departamento" style="font-size:11px" oninput="buildFac()">
+    <input class="form-input fb-qty" type="number" value="${qty!=null?qty:0}" style="text-align:right;font-family:'DM Mono',monospace;font-size:11px" oninput="buildFac()">
+    <button class="btn btn-danger btn-sm" style="padding:3px 6px" onclick="document.getElementById('${id}').remove();buildFac()">✕</button>`;
+  document.getElementById('f-blocks').appendChild(div);buildFac();
+}
+
+function addFacExtra(label){
+  const id='fx'+(++_facBlocks);
+  const div=document.createElement('div');
+  div.id=id;div.style.cssText='display:grid;grid-template-columns:2fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px';
+  div.innerHTML=`
+    <input class="form-input fb-dept" type="text" value="${label}" style="font-size:11px;font-weight:600;background:rgba(255,215,64,.07);border-color:rgba(255,215,64,.25)" oninput="buildFac()">
+    <input class="form-input fb-qty" type="number" value="0" style="text-align:right;font-family:'DM Mono',monospace;font-size:11px;background:rgba(255,215,64,.07);border-color:rgba(255,215,64,.25)" oninput="buildFac()">
+    <button class="btn btn-danger btn-sm" style="padding:3px 6px" onclick="document.getElementById('${id}').remove();buildFac()">✕</button>`;
+  document.getElementById('f-blocks').appendChild(div);buildFac();
+}
+
+function getFacLines(){
+  const lines=[];
+  document.querySelectorAll('#f-blocks>div').forEach(div=>{
+    const dept=div.querySelector('.fb-dept').value.trim();
+    const qty=parseFloat(div.querySelector('.fb-qty').value)||0;
+    if(dept||qty>0)lines.push({dept,qty});
+  });
+  return lines;
+}
+
+function buildFac(){
+  const prev=document.getElementById('fac-prev');if(!prev)return;
+  const empId=document.getElementById('f-emp')&&document.getElementById('f-emp').value;
+  const emp=getEmp(empId);
+  const num=document.getElementById('f-num')&&document.getElementById('f-num').value||'1';
+  const fecha=document.getElementById('f-fecha')&&document.getElementById('f-fecha').value||today();
+  const precio=parseFloat(document.getElementById('f-precio')&&document.getElementById('f-precio').value)||8;
+  const desc=parseFloat(document.getElementById('f-desc')&&document.getElementById('f-desc').value)||0;
+  const p=db.prestador;
+  const lines=getFacLines();
+  const totalHojas=lines.reduce((a,l)=>a+l.qty,0);
+  const subtotal=totalHojas*precio;
+  const neto=Math.max(0,subtotal-desc);
+  const imp10=neto*0.1;
+  const imp05=Math.max(0,(neto-3260)*0.05);
+  prev.innerHTML=`<div class="inv-wrap">
+    <div class="inv-head">
+      <div><div class="inv-title-txt">Factura</div><div class="inv-num">N° ${num.toString().padStart(4,'0')}</div></div>
+      <div style="text-align:right;font-family:'DM Mono',monospace;font-size:11px">
+        <div style="font-size:9px;color:var(--text2);margin-bottom:2px">Fecha</div>
+        <div style="font-weight:700">${fmtD(fecha)}</div>
+      </div>
+    </div>
+    <div class="inv-parties">
+      <div>
+        <div class="ipl">Prestador del servicio</div>
+        <div class="ipn">${p.nombre}</div>
+        <div class="ipd">NIT: ${p.nit}</div>
+        <div class="ipd">${p.direccion}</div>
+        <div class="ipd">${p.categoria}</div>
+        <div class="ipd">Cta: ${p.cuenta} · ${p.banco}</div>
+      </div>
+      <div>
+        <div class="ipl">Cliente</div>
+        <div class="ipn">${emp?emp.nombre:'—'}</div>
+        <div class="ipd">NIT: ${emp&&emp.nit?emp.nit:'—'}</div>
+        <div class="ipd">REEUP: ${emp&&emp.reeup?emp.reeup:'—'}</div>
+        ${emp&&emp.direccion?`<div class="ipd">${emp.direccion}</div>`:''}
+        ${emp&&emp.responsable?`<div class="ipd">${emp.responsable}${emp.ci?' · CI: '+emp.ci:''}</div>`:''}
+        ${emp&&emp.cargo?`<div class="ipd">${emp.cargo}</div>`:''}
+      </div>
+    </div>
+    <table class="inv-table">
+      <thead><tr><th>Descripción</th><th style="text-align:right">Cant. hojas</th><th style="text-align:right">Precio unit.</th><th style="text-align:right">Importe CUP</th></tr></thead>
+      <tbody>
+        ${lines.map(l=>`<tr><td>${l.dept||'—'}</td><td style="text-align:right;font-family:'DM Mono',monospace">${fmtI(l.qty)}</td>
+          <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(precio)}</td>
+          <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(l.qty*precio)}</td></tr>`).join('')}
+        ${desc>0?`<tr><td colspan="3" style="text-align:right;color:var(--text2)">Descuento / Reajuste</td><td style="text-align:right;font-family:'DM Mono',monospace;color:var(--red)">- ${fmt(desc)}</td></tr>`:''}
+        <tr class="tr-sub"><td colspan="2">SUBTOTAL</td><td style="text-align:right">${fmtI(totalHojas)} hojas</td><td style="text-align:right">${fmt(neto)} CUP</td></tr>
+        <tr><td colspan="3" style="color:var(--text2)">Impuesto sobre ventas 10%</td><td style="text-align:right;font-family:'DM Mono',monospace;color:var(--yellow)">${fmt(imp10)}</td></tr>
+        <tr><td colspan="3" style="color:var(--text2)">Contribución especial 5%${neto<=3260?' (exento)':''}</td><td style="text-align:right;font-family:'DM Mono',monospace;color:var(--yellow)">${fmt(imp05)}</td></tr>
+        <tr class="tr-tot"><td colspan="3">TOTAL A PAGAR</td><td style="text-align:right">${fmt(neto)} CUP</td></tr>
+      </tbody>
+    </table>
+    <div class="inv-sigs">
+      <div><div class="sig-line"></div><div style="font-size:10px;color:var(--text2)">${p.nombre}</div><div style="font-size:9px;color:var(--text2)">NIT: ${p.nit} · ${p.categoria}</div><div style="font-size:9px;font-weight:700">Prestador del servicio</div></div>
+      <div><div class="sig-line"></div><div style="font-size:10px;color:var(--text2)">${emp&&emp.responsable?emp.responsable:'___________________________'}</div>
+      ${emp&&emp.ci?`<div style="font-size:9px;color:var(--text2)">CI: ${emp.ci}</div>`:''}
+      <div style="font-size:9px;font-weight:700">${emp&&emp.cargo?emp.cargo:'Responsable económico'}</div></div>
+    </div>
+    <div class="bank-note">Datos bancarios: ${p.cuenta} · ${p.banco}</div>
+  </div>`;
+}
+
+function printFac(){window.print();}
+
+function saveFac(){
+  const empId=document.getElementById('f-emp').value;
+  const num=document.getElementById('f-num').value;
+  const fecha=document.getElementById('f-fecha').value;
+  const precio=parseFloat(document.getElementById('f-precio').value)||8;
+  const desc=parseFloat(document.getElementById('f-desc').value)||0;
+  const lines=getFacLines();
+  const totalHojas=lines.reduce((a,l)=>a+l.qty,0);
+  const subtotal=totalHojas*precio;
+  const neto=Math.max(0,subtotal-desc);
+  db.facturas.push({id:uid(),empresaId:empId,num,fecha,precio,desc,lines,totalHojas,neto,createdAt:today()});
+  saveDB();toast('Factura guardada ✓');
+}
+
+// ═══ IMPUESTOS ═══
+function renderImpuestos(){
+  const el=document.getElementById('tab-impuestos');
+  const years=[...new Set(db.cierres.map(c=>c.mes?c.mes.split('-')[0]:null).filter(Boolean))].sort().reverse();
+  const curYear=new Date().getFullYear().toString();
+  const selYear=years.includes(curYear)?curYear:(years[0]||curYear);
+  const yearCierres=db.cierres.filter(c=>c.mes&&c.mes.startsWith(selYear));
+  const byMonth={};
+  yearCierres.forEach(c=>{
+    const m=c.mes;
+    if(!byMonth[m])byMonth[m]={mes:m,hojas:0,importe:0,imp10:0,imp05:0};
+    byMonth[m].hojas+=c.totalHojas||0;
+    byMonth[m].importe+=c.totalImporte||0;
+    byMonth[m].imp10+=c.impuesto10||0;
+    byMonth[m].imp05+=c.impuesto05||0;
+  });
+  const meses=Object.values(byMonth).sort((a,b)=>a.mes.localeCompare(b.mes));
+  const totImp=yearCierres.reduce((a,c)=>a+(c.totalImporte||0),0);
+  const tot10=yearCierres.reduce((a,c)=>a+(c.impuesto10||0),0);
+  const tot05=yearCierres.reduce((a,c)=>a+(c.impuesto05||0),0);
+  el.innerHTML=`<div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:16px">Resumen de Impuestos</div>
+  <div class="grid3" style="margin-bottom:14px">
+    <div class="stat-card gr"><div class="stat-label">Ingresos ${selYear}</div><div class="stat-value">${fmt(totImp)}<span class="stat-unit">CUP</span></div></div>
+    <div class="stat-card wa"><div class="stat-label">Imp. ventas 10%</div><div class="stat-value">${fmt(tot10)}<span class="stat-unit">CUP</span></div></div>
+    <div class="stat-card re"><div class="stat-label">Contribución 5%</div><div class="stat-value">${fmt(tot05)}<span class="stat-unit">CUP</span></div></div>
+  </div>
+  <div class="card"><div class="card-title">Desglose mensual — ${selYear}</div>
+    ${meses.length===0?'<div class="empty-state"><div class="empty-icon">💰</div><div>Sin datos para este año</div></div>':
+    `<div class="tbl-wrap"><table>
+      <thead><tr><th>Mes</th><th class="td-num">Hojas</th><th class="td-num">Importe</th><th class="td-num">Imp.10%</th><th class="td-num">Imp.5%</th><th class="td-num">Total Imp.</th></tr></thead>
+      <tbody>
+        ${meses.map(m=>`<tr>
+          <td style="font-weight:600">${mesLabel(m.mes)}</td>
+          <td class="td-num td-mono">${fmtI(m.hojas)}</td>
+          <td class="td-num td-mono" style="color:var(--accent)">${fmt(m.importe)}</td>
+          <td class="td-num td-mono" style="color:var(--yellow)">${fmt(m.imp10)}</td>
+          <td class="td-num td-mono" style="color:var(--red)">${fmt(m.imp05)}</td>
+          <td class="td-num td-mono" style="font-weight:700">${fmt(m.imp10+m.imp05)}</td>
+        </tr>`).join('')}
+        <tr style="border-top:2px solid var(--border)">
+          <td style="font-weight:700;font-family:'Syne',sans-serif">TOTAL ${selYear}</td>
+          <td class="td-num td-mono" style="font-weight:700">${fmtI(yearCierres.reduce((a,c)=>a+(c.totalHojas||0),0))}</td>
+          <td class="td-num td-mono" style="color:var(--accent);font-weight:700">${fmt(totImp)}</td>
+          <td class="td-num td-mono" style="color:var(--yellow);font-weight:700">${fmt(tot10)}</td>
+          <td class="td-num td-mono" style="color:var(--red);font-weight:700">${fmt(tot05)}</td>
+          <td class="td-num td-mono" style="font-weight:700;font-size:13px">${fmt(tot10+tot05)}</td>
+        </tr>
+      </tbody>
+    </table></div>`}
+  </div>
+  <div class="card"><div class="card-title">Por empresa — ${selYear}</div>
+    ${yearCierres.length===0?'<div class="empty-state"><div class="empty-icon">🏢</div><div>Sin datos</div></div>':
+    (()=>{
+      const byEmp={};
+      yearCierres.forEach(c=>{
+        if(!byEmp[c.empresaId])byEmp[c.empresaId]={emp:getEmp(c.empresaId),hojas:0,importe:0,imp10:0,imp05:0,count:0};
+        byEmp[c.empresaId].hojas+=c.totalHojas||0;
+        byEmp[c.empresaId].importe+=c.totalImporte||0;
+        byEmp[c.empresaId].imp10+=c.impuesto10||0;
+        byEmp[c.empresaId].imp05+=c.impuesto05||0;
+        byEmp[c.empresaId].count++;
+      });
+      return`<div class="tbl-wrap"><table>
+        <thead><tr><th>Empresa</th><th class="td-num">Cierres</th><th class="td-num">Hojas</th><th class="td-num">Importe</th><th class="td-num">Imp.10%</th><th class="td-num">Imp.5%</th></tr></thead>
+        <tbody>${Object.values(byEmp).sort((a,b)=>b.importe-a.importe).map(x=>`<tr>
+          <td style="font-weight:600">${x.emp?x.emp.nombre:x.empresaId}</td>
+          <td class="td-num td-mono">${x.count}</td>
+          <td class="td-num td-mono">${fmtI(x.hojas)}</td>
+          <td class="td-num td-mono" style="color:var(--accent)">${fmt(x.importe)}</td>
+          <td class="td-num td-mono" style="color:var(--yellow)">${fmt(x.imp10)}</td>
+          <td class="td-num td-mono" style="color:var(--red)">${fmt(x.imp05)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+    })()}
+  </div>`;
+}
+
+// ═══ INIT ═══
+updateHeader();
+renderDashboard();
+syncCompanies();
+</script>
+</body>
+</html>
