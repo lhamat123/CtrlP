@@ -849,7 +849,7 @@ function renderFactura(){
         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">Líneas de la factura</div>
         <div id="f-blocks"></div>
         <div class="btn-row" style="margin-bottom:10px">
-          <button class="btn btn-ghost btn-sm" onclick="addFacBlock()">+ Departamento</button>
+          <button class="btn btn-ghost btn-sm" onclick="addFacDepto()">+ Departamento</button>
           <button class="btn btn-warn btn-sm" onclick="addFacExtra('TCP — Modelos oficiales')">+ Modelos TCP</button>
           <button class="btn btn-ghost btn-sm" onclick="addFacExtra('Otro concepto')">+ Otro</button>
         </div>
@@ -867,32 +867,72 @@ function renderFactura(){
       </div>
     </div>
   </div>`;
-  addFacBlock();buildFac();
+  addFacDepto();buildFac();
 }
 
 function onFacEmpChange(){
   const emp=getEmp(document.getElementById('f-emp').value);
   if(emp)document.getElementById('f-precio').value=emp.precio;
   document.getElementById('f-blocks').innerHTML='';_facBlocks=0;
-  if(emp)emp.deptos.forEach(d=>addFacBlock(d,0));
+  if(emp)emp.deptos.forEach(d=>addFacDepto(d));
+  else addFacDepto();
   buildFac();
 }
 
-function addFacBlock(dept,qty){
-  const id='fb'+(++_facBlocks);
+/* ── Bloque departamento con filas de impresora ── */
+function addFacDepto(dept,printers){
+  const bid='fd'+(++_facBlocks);
   const div=document.createElement('div');
-  div.id=id;div.style.cssText='display:grid;grid-template-columns:2fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px';
+  div.id=bid;div.className='cblock';
   div.innerHTML=`
-    <input class="form-input fb-dept" type="text" value="${dept||''}" placeholder="Departamento" style="font-size:11px" oninput="buildFac()">
-    <input class="form-input fb-qty" type="number" value="${qty!=null?qty:0}" style="text-align:right;font-family:'DM Mono',monospace;font-size:11px" oninput="buildFac()">
-    <button class="btn btn-danger btn-sm" style="padding:3px 6px" onclick="document.getElementById('${id}').remove();buildFac()">✕</button>`;
-  document.getElementById('f-blocks').appendChild(div);buildFac();
+    <div class="cblock-head">
+      <input class="cblock-dept-input" value="${dept||''}" placeholder="Departamento / Centro de costo" oninput="buildFac()">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="cblock-total" id="${bid}-total" style="font-size:11px;color:var(--accent)">0 hojas</span>
+        <button class="btn btn-danger btn-sm" onclick="document.getElementById('${bid}').remove();buildFac()" style="padding:3px 7px">✕</button>
+      </div>
+    </div>
+    <div class="cblock-body">
+      <div class="seg-labels">
+        <div class="seg-label">Impresora</div>
+        <div class="seg-label" style="text-align:right">Hojas</div>
+        <div></div>
+      </div>
+      <div id="${bid}-printers"></div>
+      <button class="add-seg-btn" onclick="addFacPrinter('${bid}')">+ impresora</button>
+    </div>`;
+  document.getElementById('f-blocks').appendChild(div);
+  const ps=printers&&printers.length?printers:[{name:'',qty:0}];
+  ps.forEach(p=>addFacPrinter(bid,p.name,p.qty));
+  buildFac();
+}
+
+function addFacPrinter(bid,name,qty){
+  const pid='fp'+(++_facBlocks);
+  const row=document.createElement('div');
+  row.id=pid;
+  row.style.cssText='display:grid;grid-template-columns:2fr 1fr 28px;gap:6px;align-items:center;margin-bottom:6px';
+  row.innerHTML=`
+    <input class="form-input fp-name" value="${name||''}" placeholder="Epson ET 4150 / modelo" style="font-size:11px" oninput="facRecalcDepto('${bid}')">
+    <input class="form-input fp-qty" type="number" value="${qty!=null?qty:0}" style="text-align:right;font-family:'DM Mono',monospace;font-size:12px" oninput="facRecalcDepto('${bid}')">
+    <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${pid}').remove();facRecalcDepto('${bid}')">✕</button>`;
+  document.getElementById(bid+'-printers').appendChild(row);
+  facRecalcDepto(bid);
+}
+
+function facRecalcDepto(bid){
+  const block=document.getElementById(bid);if(!block)return;
+  let total=0;
+  block.querySelectorAll('.fp-qty').forEach(inp=>total+=parseFloat(inp.value)||0);
+  const tot=document.getElementById(bid+'-total');
+  if(tot)tot.textContent=fmtI(total)+' hojas';
+  buildFac();
 }
 
 function addFacExtra(label){
   const id='fx'+(++_facBlocks);
   const div=document.createElement('div');
-  div.id=id;div.style.cssText='display:grid;grid-template-columns:2fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px';
+  div.id=id;div.className='extra-row';
   div.innerHTML=`
     <input class="form-input fb-dept" type="text" value="${label}" style="font-size:11px;font-weight:600;background:rgba(255,215,64,.07);border-color:rgba(255,215,64,.25)" oninput="buildFac()">
     <input class="form-input fb-qty" type="number" value="0" style="text-align:right;font-family:'DM Mono',monospace;font-size:11px;background:rgba(255,215,64,.07);border-color:rgba(255,215,64,.25)" oninput="buildFac()">
@@ -900,11 +940,20 @@ function addFacExtra(label){
   document.getElementById('f-blocks').appendChild(div);buildFac();
 }
 
+/* Recoge líneas para factura: agrupa impresoras del mismo dpto */
 function getFacLines(){
   const lines=[];
-  document.querySelectorAll('#f-blocks>div').forEach(div=>{
-    const dept=div.querySelector('.fb-dept').value.trim();
-    const qty=parseFloat(div.querySelector('.fb-qty').value)||0;
+  // Bloques departamento (cblock)
+  document.querySelectorAll('#f-blocks .cblock').forEach(block=>{
+    const dept=block.querySelector('.cblock-dept-input').value.trim();
+    let total=0;
+    block.querySelectorAll('.fp-qty').forEach(inp=>total+=parseFloat(inp.value)||0);
+    if(dept||total>0)lines.push({dept:dept||'—',qty:total});
+  });
+  // Extras (TCP, otros)
+  document.querySelectorAll('#f-blocks .extra-row').forEach(row=>{
+    const dept=row.querySelector('.fb-dept').value.trim();
+    const qty=parseFloat(row.querySelector('.fb-qty').value)||0;
     if(dept||qty>0)lines.push({dept,qty});
   });
   return lines;
