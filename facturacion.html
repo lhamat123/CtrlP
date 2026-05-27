@@ -345,7 +345,8 @@ function defaultDB(){
       {id:'c1777171322945',nombre:'UNIDAD "2"',nit:'12001113886',reeup:'321-1-09340',direccion:'calle 27 No. 28 / 4ta y 6ta, Rpto Lenin, Holguín',tel:'52878123',responsable:'Marlenis Rodríguez Mulet',ci:'67031114299',cargo:'J´ Dpto. Económico',precio:8,diaCierre:28,deptos:['Dirección Molienda Unidad 2','Economía Unidad 2','Fomento Transporte','DPV DIRECCION','DPV INVERSIONES']}
     ],
     cierres:[],
-    facturas:[]
+    facturas:[],
+    printers:[]
   };
 }
 
@@ -358,7 +359,7 @@ function saveDB(){localStorage.setItem(FAC_KEY,JSON.stringify(db));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 db=loadDB();
 
-// Sync companies from data.json (GitHub) if available
+// Sync companies AND printers from data.json (GitHub)
 async function syncCompanies(){
   try{
     const GH_USER='lhamat123',GH_REPO='CtrlP',GH_FILE='data.json';
@@ -367,23 +368,25 @@ async function syncCompanies(){
     if(!r.ok)return;
     const data=await r.json();
     if(data.companies&&data.companies.length){
-      // Upsert companies from index's data.json
       data.companies.forEach(c=>{
         if(!db.empresas.find(e=>e.id===c.id)){
-          db.empresas.push({
-            id:c.id,nombre:c.name,nit:'',reeup:'',direccion:'',tel:'',
-            responsable:'',ci:'',cargo:'',precio:8,diaCierre:28,
-            deptos:['Dirección','Economía']
-          });
+          db.empresas.push({id:c.id,nombre:c.name,nit:'',reeup:'',direccion:'',tel:'',
+            responsable:'',ci:'',cargo:'',precio:8,diaCierre:28,deptos:['Dirección','Economía']});
         }else{
-          // Update name if changed
           const e=db.empresas.find(e=>e.id===c.id);
           if(e)e.nombre=c.name;
         }
       });
-      saveDB();
-      updateHeader();
     }
+    // Sync printers so factura can use them
+    if(data.printers&&data.printers.length){
+      db.printers=data.printers.map(p=>({
+        id:p.id,name:p.name,company:p.company,dept:p.dept||'',
+        status:p.status||'Activa',code:p.code||''
+      }));
+    }
+    saveDB();
+    updateHeader();
   }catch(e){}
 }
 
@@ -829,6 +832,51 @@ function delCierre(id){
 // ═══ FACTURA ═══
 let _facBlocks=0,_facEditId=null;
 
+/* Devuelve los IDs de impresoras ya seleccionadas en cualquier bloque activo */
+function _facUsedPrinters(){
+  const used=new Set();
+  document.querySelectorAll('#f-blocks .fp-select').forEach(sel=>{
+    if(sel.value)used.add(sel.value);
+  });
+  return used;
+}
+
+/* Construye las <option> para un selector de impresora de la empresa dada.
+   currentId = la impresora actualmente seleccionada en ESTE selector (siempre se incluye).
+   Solo se ofrecen:
+     a) La impresora ya asignada al departamento (status=Activa, misma empresa).
+     b) Impresoras LIBRES: de la misma empresa, cuyo estado NO es 'Activa'
+        (Inactiva o Mantenimiento) y que no están usadas en otro bloque.
+*/
+function _facPrinterOptions(companyId, currentId){
+  if(!db.printers||!db.printers.length) return '<option value="">— sin datos —</option>';
+  const used=_facUsedPrinters();
+  const all=db.printers.filter(p=>p.company===companyId);
+  const opts=all.filter(p=>{
+    if(p.id===currentId) return true;       // siempre incluir la actual
+    if(used.has(p.id)) return false;         // ya usada en otro bloque
+    if(p.status==='Activa') return false;    // activa en otro dpto → no disponible
+    return true;                             // libre (Inactiva / Mantenimiento)
+  });
+  const statusIcon=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
+  let html='<option value="">— seleccionar —</option>';
+  // Grupo: asignada al bloque (activas de la empresa no usadas en otro bloque)
+  const asignadas=all.filter(p=>p.status==='Activa'&&(p.id===currentId||!used.has(p.id)));
+  if(asignadas.length){
+    html+=`<optgroup label="Activas">`;
+    asignadas.forEach(p=>{html+=`<option value="${p.id}"${p.id===currentId?' selected':''}>${statusIcon(p.status)} ${p.name} (${p.dept||'—'})</option>`;});
+    html+=`</optgroup>`;
+  }
+  // Grupo: libres (no activas)
+  const libres=all.filter(p=>p.status!=='Activa'&&(p.id===currentId||!used.has(p.id)));
+  if(libres.length){
+    html+=`<optgroup label="Libres (disponibles para intercambio)">`;
+    libres.forEach(p=>{html+=`<option value="${p.id}"${p.id===currentId?' selected':''}>${statusIcon(p.status)} ${p.name} · ${p.status}</option>`;});
+    html+=`</optgroup>`;
+  }
+  return html;
+}
+
 function renderFactura(){
   const el=document.getElementById('tab-factura');
   el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -874,50 +922,106 @@ function onFacEmpChange(){
   const emp=getEmp(document.getElementById('f-emp').value);
   if(emp)document.getElementById('f-precio').value=emp.precio;
   document.getElementById('f-blocks').innerHTML='';_facBlocks=0;
-  if(emp)emp.deptos.forEach(d=>addFacDepto(d));
-  else addFacDepto();
+  const empId=emp?emp.id:null;
+  if(empId&&db.printers&&db.printers.length){
+    // Agrupa impresoras activas de la empresa por departamento
+    const compPrinters=db.printers.filter(p=>p.company===empId&&p.status==='Activa');
+    const byDept={};
+    compPrinters.forEach(p=>{
+      const d=p.dept||'—';
+      if(!byDept[d])byDept[d]=[];
+      byDept[d].push(p);
+    });
+    if(Object.keys(byDept).length){
+      Object.entries(byDept).forEach(([dept,ps])=>addFacDepto(dept,ps));
+    } else {
+      // empresa sin impresoras en cache: crear bloques vacíos por los deptos guardados
+      emp.deptos.forEach(d=>addFacDepto(d,[]));
+    }
+  } else if(emp){
+    emp.deptos.forEach(d=>addFacDepto(d,[]));
+  } else {
+    addFacDepto();
+  }
   buildFac();
 }
 
-/* ── Bloque departamento con filas de impresora ── */
-function addFacDepto(dept,printers){
+/* Bloque departamento con filas de impresora */
+function addFacDepto(deptName,printers){
+  const empId=document.getElementById('f-emp')&&document.getElementById('f-emp').value;
   const bid='fd'+(++_facBlocks);
   const div=document.createElement('div');
   div.id=bid;div.className='cblock';
   div.innerHTML=`
     <div class="cblock-head">
-      <input class="cblock-dept-input" value="${dept||''}" placeholder="Departamento / Centro de costo" oninput="buildFac()">
+      <input class="cblock-dept-input" value="${deptName||''}" placeholder="Departamento / Centro de costo" oninput="buildFac()">
       <div style="display:flex;align-items:center;gap:8px">
-        <span class="cblock-total" id="${bid}-total" style="font-size:11px;color:var(--accent)">0 hojas</span>
+        <span id="${bid}-total" style="font-size:11px;color:var(--accent);white-space:nowrap">0 hojas</span>
         <button class="btn btn-danger btn-sm" onclick="document.getElementById('${bid}').remove();buildFac()" style="padding:3px 7px">✕</button>
       </div>
     </div>
     <div class="cblock-body">
-      <div class="seg-labels">
+      <div class="seg-labels" style="grid-template-columns:2fr 1fr 26px">
         <div class="seg-label">Impresora</div>
         <div class="seg-label" style="text-align:right">Hojas</div>
         <div></div>
       </div>
-      <div id="${bid}-printers"></div>
-      <button class="add-seg-btn" onclick="addFacPrinter('${bid}')">+ impresora</button>
+      <div id="${bid}-rows"></div>
+      <button class="add-seg-btn" onclick="addFacPrinterRow('${bid}')">+ impresora</button>
     </div>`;
   document.getElementById('f-blocks').appendChild(div);
-  const ps=printers&&printers.length?printers:[{name:'',qty:0}];
-  ps.forEach(p=>addFacPrinter(bid,p.name,p.qty));
+  const list=printers&&printers.length?printers:[{id:'',qty:0}];
+  list.forEach(p=>addFacPrinterRow(bid,empId,p.id||'',0));
   buildFac();
 }
 
-function addFacPrinter(bid,name,qty){
-  const pid='fp'+(++_facBlocks);
+/* Fila impresora dentro de un bloque */
+function addFacPrinterRow(bid,empId,printerId,qty){
+  const empIdReal=empId||(document.getElementById('f-emp')&&document.getElementById('f-emp').value)||'';
+  const rowId='fr'+(++_facBlocks);
   const row=document.createElement('div');
-  row.id=pid;
-  row.style.cssText='display:grid;grid-template-columns:2fr 1fr 28px;gap:6px;align-items:center;margin-bottom:6px';
-  row.innerHTML=`
-    <input class="form-input fp-name" value="${name||''}" placeholder="Epson ET 4150 / modelo" style="font-size:11px" oninput="facRecalcDepto('${bid}')">
-    <input class="form-input fp-qty" type="number" value="${qty!=null?qty:0}" style="text-align:right;font-family:'DM Mono',monospace;font-size:12px" oninput="facRecalcDepto('${bid}')">
-    <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${pid}').remove();facRecalcDepto('${bid}')">✕</button>`;
-  document.getElementById(bid+'-printers').appendChild(row);
+  row.id=rowId;
+  row.style.cssText='display:grid;grid-template-columns:2fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px';
+
+  const hasPrinters=db.printers&&db.printers.filter(p=>p.company===empIdReal).length>0;
+
+  if(hasPrinters){
+    row.innerHTML=`
+      <select class="form-select fp-select" style="font-size:11px;padding:5px 8px"
+        onchange="onFacPrinterSelect('${bid}','${rowId}',this)">
+        ${_facPrinterOptions(empIdReal, printerId)}
+      </select>
+      <input class="form-input fp-qty" type="number" value="${qty||0}" style="text-align:right;font-family:'DM Mono',monospace;font-size:12px" oninput="facRecalcDepto('${bid}')">
+      <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${rowId}').remove();_facRefreshSelects('${bid}');facRecalcDepto('${bid}')">✕</button>`;
+  } else {
+    row.innerHTML=`
+      <input class="form-input fp-name" value="${printerId||''}" placeholder="Nombre impresora" style="font-size:11px" oninput="facRecalcDepto('${bid}')">
+      <input class="form-input fp-qty" type="number" value="${qty||0}" style="text-align:right;font-family:'DM Mono',monospace;font-size:12px" oninput="facRecalcDepto('${bid}')">
+      <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${rowId}').remove();facRecalcDepto('${bid}')">✕</button>`;
+  }
+  document.getElementById(bid+'-rows').appendChild(row);
   facRecalcDepto(bid);
+}
+
+/* Cuando se selecciona una impresora: actualizar todos los selects del bloque
+   para que los demás no puedan elegir la misma */
+function onFacPrinterSelect(bid, rowId, sel){
+  _facRefreshSelects(bid, rowId);
+  facRecalcDepto(bid);
+}
+
+/* Refresca las opciones de todos los selects de un bloque */
+function _facRefreshSelects(bid, exceptRowId){
+  const empId=document.getElementById('f-emp')&&document.getElementById('f-emp').value;
+  const block=document.getElementById(bid);if(!block)return;
+  block.querySelectorAll('.fp-select').forEach(sel=>{
+    const rowId=sel.closest('[id^="fr"]')&&sel.closest('[id^="fr"]').id;
+    if(rowId===exceptRowId)return;
+    const cur=sel.value;
+    sel.innerHTML=_facPrinterOptions(empId,cur);
+    sel.value=cur;
+  });
+  buildFac();
 }
 
 function facRecalcDepto(bid){
@@ -929,6 +1033,7 @@ function facRecalcDepto(bid){
   buildFac();
 }
 
+/* Extra libre (TCP, otros) */
 function addFacExtra(label){
   const id='fx'+(++_facBlocks);
   const div=document.createElement('div');
@@ -940,21 +1045,34 @@ function addFacExtra(label){
   document.getElementById('f-blocks').appendChild(div);buildFac();
 }
 
-/* Recoge líneas para factura: agrupa impresoras del mismo dpto */
+/* Recoge líneas para vista previa / guardado.
+   Una línea por bloque-departamento (suma hojas de sus impresoras).
+   Los nombres de impresora se incluyen como detalle. */
 function getFacLines(){
   const lines=[];
-  // Bloques departamento (cblock)
   document.querySelectorAll('#f-blocks .cblock').forEach(block=>{
     const dept=block.querySelector('.cblock-dept-input').value.trim();
     let total=0;
-    block.querySelectorAll('.fp-qty').forEach(inp=>total+=parseFloat(inp.value)||0);
-    if(dept||total>0)lines.push({dept:dept||'—',qty:total});
+    const impresoras=[];
+    block.querySelectorAll('[id^="fr"]').forEach(row=>{
+      const qty=parseFloat(row.querySelector('.fp-qty').value)||0;
+      const sel=row.querySelector('.fp-select');
+      const nameEl=row.querySelector('.fp-name');
+      let nombre='';
+      if(sel&&sel.value){
+        const p=db.printers&&db.printers.find(x=>x.id===sel.value);
+        nombre=p?p.name:(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].text)||'';
+      } else if(nameEl){
+        nombre=nameEl.value.trim();
+      }
+      if(nombre||qty>0){impresoras.push({nombre,qty});total+=qty;}
+    });
+    if(dept||total>0)lines.push({dept:dept||'—',qty:total,impresoras});
   });
-  // Extras (TCP, otros)
   document.querySelectorAll('#f-blocks .extra-row').forEach(row=>{
     const dept=row.querySelector('.fb-dept').value.trim();
     const qty=parseFloat(row.querySelector('.fb-qty').value)||0;
-    if(dept||qty>0)lines.push({dept,qty});
+    if(dept||qty>0)lines.push({dept,qty,impresoras:[]});
   });
   return lines;
 }
@@ -974,6 +1092,34 @@ function buildFac(){
   const neto=Math.max(0,subtotal-desc);
   const imp10=neto*0.1;
   const imp05=Math.max(0,(neto-3260)*0.05);
+
+  // Filas de tabla: si la línea tiene impresoras detalladas, las muestra como sub-filas
+  let tableRows='';
+  lines.forEach(l=>{
+    if(l.impresoras&&l.impresoras.length>1){
+      // cabecera del dpto
+      tableRows+=`<tr style="background:rgba(128,128,128,.06)"><td colspan="4" style="font-size:10px;font-weight:700;color:var(--accent);padding:5px 8px">▸ ${l.dept}</td></tr>`;
+      l.impresoras.forEach(imp=>{
+        tableRows+=`<tr><td style="padding-left:16px;font-size:10px;color:var(--text2)">${imp.nombre||'—'}</td>
+          <td style="text-align:right;font-family:'DM Mono',monospace">${fmtI(imp.qty)}</td>
+          <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(precio)}</td>
+          <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(imp.qty*precio)}</td></tr>`;
+      });
+      tableRows+=`<tr style="border-top:1px solid var(--border)"><td style="padding-left:16px;font-size:10px;font-weight:700">Subtotal ${l.dept}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmtI(l.qty)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(precio)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace;font-weight:700">${fmt(l.qty*precio)}</td></tr>`;
+    } else {
+      const imp=l.impresoras&&l.impresoras[0];
+      const desc2=imp&&imp.nombre?`${l.dept} — ${imp.nombre}`:l.dept||'—';
+      tableRows+=`<tr><td>${desc2}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace">${fmtI(l.qty)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(precio)}</td>
+        <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(l.qty*precio)}</td></tr>`;
+    }
+  });
+  if(desc>0)tableRows+=`<tr><td colspan="3" style="text-align:right;color:var(--text2)">Descuento / Reajuste</td><td style="text-align:right;font-family:'DM Mono',monospace;color:var(--red)">- ${fmt(desc)}</td></tr>`;
+
   prev.innerHTML=`<div class="inv-wrap">
     <div class="inv-head">
       <div><div class="inv-title-txt">Factura</div><div class="inv-num">N° ${num.toString().padStart(4,'0')}</div></div>
@@ -1004,10 +1150,7 @@ function buildFac(){
     <table class="inv-table">
       <thead><tr><th>Descripción</th><th style="text-align:right">Cant. hojas</th><th style="text-align:right">Precio unit.</th><th style="text-align:right">Importe CUP</th></tr></thead>
       <tbody>
-        ${lines.map(l=>`<tr><td>${l.dept||'—'}</td><td style="text-align:right;font-family:'DM Mono',monospace">${fmtI(l.qty)}</td>
-          <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(precio)}</td>
-          <td style="text-align:right;font-family:'DM Mono',monospace">${fmt(l.qty*precio)}</td></tr>`).join('')}
-        ${desc>0?`<tr><td colspan="3" style="text-align:right;color:var(--text2)">Descuento / Reajuste</td><td style="text-align:right;font-family:'DM Mono',monospace;color:var(--red)">- ${fmt(desc)}</td></tr>`:''}
+        ${tableRows}
         <tr class="tr-sub"><td colspan="2">SUBTOTAL</td><td style="text-align:right">${fmtI(totalHojas)} hojas</td><td style="text-align:right">${fmt(neto)} CUP</td></tr>
         <tr><td colspan="3" style="color:var(--text2)">Impuesto sobre ventas 10%</td><td style="text-align:right;font-family:'DM Mono',monospace;color:var(--yellow)">${fmt(imp10)}</td></tr>
         <tr><td colspan="3" style="color:var(--text2)">Contribución especial 5%${neto<=3260?' (exento)':''}</td><td style="text-align:right;font-family:'DM Mono',monospace;color:var(--yellow)">${fmt(imp05)}</td></tr>
