@@ -259,10 +259,12 @@ tbody tr:last-child td{border-bottom:none}
       <div class="form-group"><label class="form-label">CI responsable</label><input class="form-input" id="e-ci" placeholder="67031114299"></div>
       <div class="form-group"><label class="form-label">Cargo</label><input class="form-input" id="e-cargo" placeholder="J´ Dpto. Económico"></div>
     </div>
-    <div class="form-group"><label class="form-label">Departamentos (uno por línea)</label><textarea class="form-textarea" id="e-deptos" rows="4" placeholder="DIRECCION&#10;ECONOMIA&#10;TRANSPORTE"></textarea></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Día habitual de cierre</label><input class="form-input" type="number" id="e-dia" value="28" min="1" max="31"></div>
     </div>
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin:10px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border)">Departamentos e impresoras</div>
+    <div id="e-deptos-blocks"></div>
+    <button class="btn btn-ghost btn-sm" onclick="addEmpDepto()" style="margin-bottom:8px">+ Departamento</button>
   </div>
   <div class="modal-footer">
     <button class="btn btn-ghost" onclick="closeOverlay('modal-emp')">Cancelar</button>
@@ -498,7 +500,7 @@ function renderDashboard(){
       <tbody>${db.empresas.map(e=>{const nc=nextClose(e);const days=nc?daysUntil(nc):999;
         return`<tr>
           <td style="font-weight:600">${e.nombre}</td>
-          <td style="font-size:10px;font-family:'DM Mono',monospace">${(()=>{const ps=(db.printers||[]).filter(p=>p.company===e.id);const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';return ps.length?ps.map(p=>si(p.status)+' '+p.name).join('<br>'):'—';})()}</td>
+          <td style="font-size:10px;font-family:'DM Mono',monospace">${(()=>{const ps=(db.printers||[]).filter(p=>p.company===e.id);const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';return ps.length?ps.map(p=>`<a href="index.html?printer=${p.id}" style="display:block;text-decoration:none;color:inherit" title="Ver en Ctrl+P">${si(p.status)} ${p.name} <span style="color:var(--accent);font-size:9px">↗</span></a>`).join(''):'—';})()}</td>
           <td class="td-mono" style="color:var(--text2)">día ${e.diaCierre}</td>
           <td>${nc?`<span class="badge ${days<=3?'':'badge-pending'}" style="${days<=3?'background:rgba(255,82,82,.12);color:var(--red);border:1px solid rgba(255,82,82,.3)':days<=7?'':'background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.25)'}">${days}d</span>
             <span style="font-size:10px;color:var(--text2);margin-left:6px">${nc.toLocaleDateString('es-CU')}</span>`:'—'}</td>
@@ -532,7 +534,7 @@ function renderEmpresas(){
           ${(()=>{const ps=(db.printers||[]).filter(p=>p.company===e.id);
             if(!ps.length)return'<div style=\"font-size:10px;color:var(--text2);font-style:italic\">Sin impresoras</div>';
             const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
-            return ps.map(p=>'<div style=\"font-size:10px;font-family:\x27DM Mono\x27,monospace;white-space:nowrap\">'+si(p.status)+' '+p.name+(p.dept?'<span style=\"color:var(--text2);margin-left:5px\">'+(p.dept)+'</span>':'')+'</div>').join('');
+            return ps.map(p=>'<a href="index.html?printer='+p.id+'" title="Ver en Ctrl+P" style="display:block;font-size:10px;font-family:\x27DM Mono\x27,monospace;white-space:nowrap;text-decoration:none;color:inherit">'+si(p.status)+' '+p.name+(p.dept?'<span style="color:var(--text2);margin-left:5px">'+(p.dept)+'</span>':'')+' <span style="color:var(--accent);font-size:9px">↗</span></a>').join('');
           })()}
         </div>
         <button class="btn btn-ghost btn-sm" onclick="openEmpModal('${e.id}')">✏️</button>
@@ -542,8 +544,104 @@ function renderEmpresas(){
   </div>`;
 }
 
+let _empDeptId=0;
+
+/* Impresoras disponibles para asignar a un dpto de esta empresa:
+   - Ya asignadas a ese dpto (se incluyen siempre)
+   - Libres: no activas O activas sin dpto O activas de esta empresa
+     que no estén ya usadas en otro bloque del modal */
+function _empAvailPrinters(empId, currentPrinterIds){
+  if(!db.printers||!db.printers.length) return [];
+  // IDs ya asignados en todos los bloques del modal
+  const usedInModal=new Set();
+  document.querySelectorAll('#e-deptos-blocks .edp-printer-sel').forEach(sel=>{
+    if(sel.value) usedInModal.add(sel.value);
+  });
+  return db.printers.filter(p=>{
+    if(currentPrinterIds&&currentPrinterIds.includes(p.id)) return true; // propia del bloque
+    if(usedInModal.has(p.id)) return false; // ya en otro bloque
+    // Libre: no activa, o activa de esta empresa sin dpto asignado
+    if(p.status!=='Activa') return true;
+    if(p.company===empId&&(!p.dept||p.dept==='')) return true;
+    return false;
+  });
+}
+
+function _empPrinterOpts(empId, selectedId){
+  const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
+  const all=db.printers||[];
+  const usedInModal=new Set();
+  document.querySelectorAll('#e-deptos-blocks .edp-printer-sel').forEach(sel=>{
+    if(sel.value&&sel.value!==selectedId) usedInModal.add(sel.value);
+  });
+  const opts=all.filter(p=>p.id===selectedId||!usedInModal.has(p.id));
+  const activas=opts.filter(p=>p.status==='Activa'&&p.company===empId);
+  const libres=opts.filter(p=>p.id!==selectedId&&(p.status!=='Activa'||p.company!==empId));
+  let html='<option value="">— impresora —</option>';
+  if(activas.length){
+    html+=`<optgroup label="Activas (esta empresa)">`;
+    activas.forEach(p=>{html+=`<option value="${p.id}"${p.id===selectedId?' selected':''}>${si(p.status)} ${p.name}${p.dept?' ('+p.dept+')':''}</option>`;});
+    html+=`</optgroup>`;
+  }
+  if(libres.length){
+    html+=`<optgroup label="Libres / intercambio">`;
+    libres.forEach(p=>{html+=`<option value="${p.id}"${p.id===selectedId?' selected':''}>${si(p.status)} ${p.name} · ${p.status}</option>`;});
+    html+=`</optgroup>`;
+  }
+  return html;
+}
+
+function addEmpDepto(deptName, printerIds){
+  const empId=_editEmpId||'new';
+  const did='edp'+(++_empDeptId);
+  const container=document.getElementById('e-deptos-blocks');
+  const div=document.createElement('div');
+  div.id=did;
+  div.style.cssText='border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px';
+  div.innerHTML=`
+    <div style="background:var(--surface2);padding:7px 10px;display:flex;align-items:center;gap:8px">
+      <input class="form-input edp-name" value="${deptName||''}" placeholder="Nombre del departamento" style="font-size:12px;font-weight:600;flex:1">
+      <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${did}').remove();_empRefreshSelects()">✕</button>
+    </div>
+    <div id="${did}-printers" style="padding:8px 10px"></div>
+    <div style="padding:0 10px 8px">
+      <button class="btn btn-ghost btn-sm" onclick="addEmpPrinterRow('${did}','${empId}')">+ impresora</button>
+    </div>`;
+  container.appendChild(div);
+  const ps=printerIds&&printerIds.length?printerIds:[''];
+  ps.forEach(pid=>addEmpPrinterRow(did, empId, pid));
+}
+
+function addEmpPrinterRow(did, empId, selectedId){
+  const rid='epr'+(++_empDeptId);
+  const row=document.createElement('div');
+  row.id=rid;
+  row.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:5px';
+  const hasPrinters=db.printers&&db.printers.length>0;
+  if(hasPrinters){
+    row.innerHTML=`<select class="form-select edp-printer-sel" style="flex:1;font-size:11px;padding:5px 8px"
+      onchange="_empRefreshSelects('${rid}')">${_empPrinterOpts(empId,selectedId||'')}</select>
+      <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${rid}').remove();_empRefreshSelects()">✕</button>`;
+  } else {
+    row.innerHTML=`<input class="form-input edp-printer-txt" value="${selectedId||''}" placeholder="Nombre impresora" style="flex:1;font-size:11px">
+      <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${rid}').remove()">✕</button>`;
+  }
+  document.getElementById(did+'-printers').appendChild(row);
+}
+
+function _empRefreshSelects(exceptId){
+  const empId=_editEmpId||'new';
+  document.querySelectorAll('#e-deptos-blocks .edp-printer-sel').forEach(sel=>{
+    const rid=sel.closest('[id^="epr"]')&&sel.closest('[id^="epr"]').id;
+    if(rid===exceptId)return;
+    const cur=sel.value;
+    sel.innerHTML=_empPrinterOpts(empId,cur);
+    sel.value=cur;
+  });
+}
+
 function openEmpModal(id){
-  _editEmpId=id||null;
+  _editEmpId=id||null;_empDeptId=0;
   const emp=id?getEmp(id):null;
   document.getElementById('emp-modal-title').textContent=emp?'Editar Empresa':'Nueva Empresa';
   document.getElementById('e-nombre').value=emp?emp.nombre:'';
@@ -555,16 +653,47 @@ function openEmpModal(id){
   document.getElementById('e-resp').value=emp?emp.responsable:'';
   document.getElementById('e-ci').value=emp?emp.ci:'';
   document.getElementById('e-cargo').value=emp?emp.cargo:'';
-  document.getElementById('e-deptos').value=emp?(emp.deptos||[]).join('\n'):'';
   document.getElementById('e-dia').value=emp?emp.diaCierre:28;
+  // Render dept blocks
+  const container=document.getElementById('e-deptos-blocks');
+  container.innerHTML='';_empDeptId=0;
+  if(emp&&emp.deptos&&emp.deptos.length){
+    emp.deptos.forEach(d=>{
+      // Find printer IDs currently assigned to this dept for this company
+      const deptPrinters=(db.printers||[]).filter(p=>p.company===emp.id&&p.dept===d).map(p=>p.id);
+      addEmpDepto(d, deptPrinters.length?deptPrinters:['']);
+    });
+  } else {
+    addEmpDepto();
+  }
   openOverlay('modal-emp');
 }
 
 function saveEmpresa(){
   const n=document.getElementById('e-nombre').value.trim();
   if(!n){toast('Nombre requerido',true);return;}
-  const deps=document.getElementById('e-deptos').value.split('\n').map(d=>d.trim()).filter(Boolean);
-  const obj={id:_editEmpId||uid(),nombre:n,
+  const empId=_editEmpId||uid();
+  // Collect deptos from blocks
+  const deptBlocks=document.querySelectorAll('#e-deptos-blocks [id^="edp"]');
+  const deps=[];
+  let valid=true;
+  deptBlocks.forEach(block=>{
+    const dname=block.querySelector('.edp-name').value.trim();
+    if(!dname)return;
+    const printers=[];
+    block.querySelectorAll('.edp-printer-sel').forEach(sel=>{if(sel.value)printers.push(sel.value);});
+    block.querySelectorAll('.edp-printer-txt').forEach(inp=>{if(inp.value.trim())printers.push(inp.value.trim());});
+    if(!printers.length){toast('El dpto "'+dname+'" no tiene impresora asignada',true);valid=false;return;}
+    deps.push({name:dname,printers});
+    // Update printer dept assignment in db.printers cache
+    printers.forEach(pid=>{
+      const p=db.printers&&db.printers.find(x=>x.id===pid);
+      if(p){p.dept=dname;p.company=empId;p.status='Activa';}
+    });
+  });
+  if(!valid)return;
+  if(!deps.length){toast('Agregue al menos un departamento con impresora',true);return;}
+  const obj={id:empId,nombre:n,
     nit:document.getElementById('e-nit').value.trim(),
     reeup:document.getElementById('e-reeup').value.trim(),
     direccion:document.getElementById('e-dir').value.trim(),
@@ -574,12 +703,37 @@ function saveEmpresa(){
     cargo:document.getElementById('e-cargo').value.trim(),
     precio:parseFloat(document.getElementById('e-precio').value)||8,
     diaCierre:parseInt(document.getElementById('e-dia').value)||28,
-    deptos:deps.length?deps:['Dirección','Economía']
+    deptos:deps.map(d=>d.name)
   };
   if(_editEmpId){const i=db.empresas.findIndex(e=>e.id===_editEmpId);if(i>=0)db.empresas[i]=obj;}
   else db.empresas.push(obj);
   saveDB();closeOverlay('modal-emp');renderEmpresas();updateHeader();
+  // Push printer updates to GitHub
+  pushPrinterUpdates();
   toast('Empresa guardada ✓');
+}
+
+/* Push updated printer assignments back to data.json in GitHub */
+async function pushPrinterUpdates(){
+  try{
+    const GH_USER='lhamat123',GH_REPO='CtrlP',GH_FILE='data.json';
+    const token=localStorage.getItem('gh_token');
+    if(!token)return; // no token, skip silent
+    const apiUrl=`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`;
+    const cur=await fetch(apiUrl,{headers:{Authorization:'token '+token}});
+    if(!cur.ok)return;
+    const meta=await cur.json();
+    const raw=atob(meta.content.replace(/\n/g,''));
+    const data=JSON.parse(raw);
+    // Merge printer changes
+    db.printers.forEach(p=>{
+      const idx=data.printers.findIndex(x=>x.id===p.id);
+      if(idx>=0){data.printers[idx].dept=p.dept;data.printers[idx].status=p.status;}
+    });
+    const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(data,null,2))));
+    await fetch(apiUrl,{method:'PUT',headers:{Authorization:'token '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({message:'Facturación: actualiza dptos/impresoras',content:encoded,sha:meta.sha})});
+  }catch(e){}
 }
 
 function delEmp(id){
@@ -594,14 +748,17 @@ function delEmp(id){
 // ═══════════════════════════════════
 let _blockId=0;
 
-function makeBlock(container,dept,segments){
+function makeBlock(container,dept,segments,empId){
   const bid='cb'+(++_blockId);
+  const _empId=empId||'';
+  const _dept=dept||'';
   const segs=segments||[{printer:'',apertura:'',cierre:'',nota:''}];
   const div=document.createElement('div');
   div.id=bid;div.className='cblock';
+  div.dataset.empId=_empId;div.dataset.dept=_dept;
   div.innerHTML=`
     <div class="cblock-head">
-      <input class="cblock-dept-input" value="${dept||''}" placeholder="Departamento / Centro de costo" oninput="recalcBlock('${bid}')">
+      <input class="cblock-dept-input" value="${_dept}" placeholder="Departamento / Centro de costo" oninput="recalcBlock('${bid}')">
       <div style="display:flex;align-items:center;gap:8px">
         <span class="cblock-total" id="${bid}-total">0 hojas</span>
         <button class="btn btn-danger btn-sm" onclick="document.getElementById('${bid}').remove();recalcAll()" style="padding:3px 7px">✕</button>
@@ -616,28 +773,87 @@ function makeBlock(container,dept,segments){
         <div></div>
       </div>
       <div id="${bid}-segs"></div>
-      <button class="add-seg-btn" onclick="addSegment('${bid}')">+ impresora / sustitución</button>
+      <button class="add-seg-btn" onclick="addSegment('${bid}','','${_empId}','${_dept}')">+ impresora / sustitución</button>
     </div>`;
   container.appendChild(div);
-  segs.forEach(s=>addSegment(bid,s));
+  segs.forEach(s=>addSegment(bid,s,_empId,_dept));
   return bid;
 }
 
-function addSegment(bid,seg){
+/* Busca el último valor de cierre de una impresora en los cierres guardados */
+function _lastCierreVal(printerId){
+  if(!printerId||!db.cierres||!db.cierres.length) return '';
+  // Buscar en todos los cierres, el más reciente que tenga esta impresora
+  const sorted=[...db.cierres].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  for(const c of sorted){
+    for(const d of (c.depts||[])){
+      for(const s of (d.segments||[])){
+        if(s.printerId===printerId&&s.cierre) return s.cierre;
+      }
+    }
+  }
+  // También buscar en printers cache (lastReading del JSON)
+  const p=db.printers&&db.printers.find(x=>x.id===printerId);
+  if(p&&p.lastReading) return p.lastReading;
+  return '';
+}
+
+function _cierrePrinterOpts(empId, dept, selectedId){
+  if(!db.printers||!db.printers.length) return null; // null = usar texto libre
+  const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
+  // Impresoras del dpto de esta empresa + libres
+  const usedInBlock=new Set();
+  // no bloquear por bloque aquí, el mismo dpto puede tener varias
+  const deptPs=(db.printers||[]).filter(p=>p.company===empId&&p.dept===dept&&p.status==='Activa');
+  const libres=(db.printers||[]).filter(p=>p.company===empId&&p.status!=='Activa');
+  let html=`<option value="">— seleccionar —</option>`;
+  if(deptPs.length){
+    html+=`<optgroup label="Asignadas al dpto">`;
+    deptPs.forEach(p=>{html+=`<option value="${p.id}"${p.id===selectedId?' selected':''}>${si(p.status)} ${p.name}</option>`;});
+    html+=`</optgroup>`;
+  }
+  if(libres.length){
+    html+=`<optgroup label="Libres (intercambio)">`;
+    libres.forEach(p=>{html+=`<option value="${p.id}"${p.id===selectedId?' selected':''}>${si(p.status)} ${p.name} · ${p.status}</option>`;});
+    html+=`</optgroup>`;
+  }
+  return html;
+}
+
+function addSegment(bid,seg,empId,dept){
   const sid='cs'+(++_blockId);
   const s=seg||{};
   const row=document.createElement('div');
   row.id=sid;row.className='seg-row';
+  const optsHtml=empId?_cierrePrinterOpts(empId,dept||'',s.printerId||''):null;
+  const printerInput=optsHtml!==null
+    ?`<select class="form-select seg-printer-sel" data-bid="${bid}" data-sid="${sid}"
+        style="font-size:11px;margin-bottom:3px;width:100%"
+        onchange="onCierrePrinterSel(this,'${bid}','${sid}')">${optsHtml}</select>`
+    :`<input class="form-input seg-printer" value="${s.printer||''}" placeholder="Epson ET 4150 / modelo" style="font-size:11px;margin-bottom:3px;width:100%" oninput="recalcBlock('${bid}')">`;
+  // Apertura: último cierre guardado para esta impresora
+  const apertura=s.apertura!==undefined?s.apertura:_lastCierreVal(s.printerId||'');
   row.innerHTML=`
     <div>
-      <input class="form-input seg-printer" value="${s.printer||''}" placeholder="Epson ET 4150 / modelo" style="font-size:11px;margin-bottom:3px" oninput="recalcBlock('${bid}')">
-      <input class="form-input seg-nota" value="${s.nota||''}" placeholder="nota: sustitución, temporal…" style="font-size:10px;background:var(--surface);opacity:.7">
+      ${printerInput}
+      <input class="form-input seg-nota" value="${s.nota||''}" placeholder="nota: sustitución, temporal…" style="font-size:10px;background:var(--surface);opacity:.7;width:100%">
     </div>
-    <input class="form-input seg-ap" type="number" value="${s.apertura||''}" placeholder="00000" style="text-align:right;font-size:12px" oninput="recalcBlock('${bid}')">
+    <input class="form-input seg-ap" type="number" value="${apertura}" placeholder="00000" style="text-align:right;font-size:12px" oninput="recalcBlock('${bid}')">
     <input class="form-input seg-cl" type="number" value="${s.cierre||''}" placeholder="00000" style="text-align:right;font-size:12px" oninput="recalcBlock('${bid}')">
     <div class="seg-diff" id="${sid}-diff" style="color:var(--text2)">—</div>
     <button class="btn btn-danger btn-sm" style="padding:3px 7px;align-self:start" onclick="document.getElementById('${sid}').remove();recalcBlock('${bid}')">✕</button>`;
   document.getElementById(bid+'-segs').appendChild(row);
+  recalcBlock(bid);
+}
+
+function onCierrePrinterSel(sel,bid,sid){
+  const printerId=sel.value;
+  const row=document.getElementById(sid);if(!row)return;
+  const apInput=row.querySelector('.seg-ap');
+  if(apInput){
+    const last=_lastCierreVal(printerId);
+    if(last!=='')apInput.value=last;
+  }
   recalcBlock(bid);
 }
 
@@ -699,14 +915,14 @@ function recalcAll(){
     </div>`;
 }
 
-function addCierreDepto(dept,segs){makeBlock(document.getElementById('c-blocks'),dept||'',segs);}
+function addCierreDepto(dept,segs,empId){makeBlock(document.getElementById('c-blocks'),dept||'',segs,empId);}
 function addCierreExtra(label){makeExtraRow(document.getElementById('c-blocks'),label);}
 
 function onCierreEmpChange(){
   const emp=getEmp(document.getElementById('c-emp').value);
   const blocks=document.getElementById('c-blocks');
   blocks.innerHTML='';_blockId=0;
-  if(emp)emp.deptos.forEach(d=>addCierreDepto(d));
+  if(emp)emp.deptos.forEach(d=>addCierreDepto(d,null,emp.id));
   recalcAll();
 }
 
@@ -730,11 +946,20 @@ function collectCierreData(){
     b.querySelectorAll('.seg-row').forEach(row=>{
       const ap=parseFloat(row.querySelector('.seg-ap').value)||0;
       const cl=parseFloat(row.querySelector('.seg-cl').value)||0;
+      const sel=row.querySelector('.seg-printer-sel');
+      const txt=row.querySelector('.seg-printer');
+      const printerId=sel?sel.value:'';
+      const printerName=sel?(sel.options[sel.selectedIndex]&&sel.options[sel.selectedIndex].textContent)||'':(txt?txt.value.trim():'');
       segments.push({
-        printer:row.querySelector('.seg-printer').value.trim(),
+        printerId,printer:printerName,
         nota:row.querySelector('.seg-nota').value.trim(),
         apertura:ap,cierre:cl,hojas:cl>0&&ap>0?Math.max(0,cl-ap):0
       });
+      // Update lastReading in printers cache
+      if(printerId&&cl>0){
+        const p=db.printers&&db.printers.find(x=>x.id===printerId);
+        if(p)p.lastReading=cl;
+      }
     });
     depts.push({dept,segments,subtotal:segments.reduce((a,s)=>a+s.hojas,0)});
   });
@@ -765,7 +990,7 @@ function saveCierre(){
     impuesto10:imp10,impuesto05:imp05,
     factura,facturado:!!factura
   });
-  saveDB();closeOverlay('modal-cierre');renderCierres();updateHeader();
+  saveDB();pushPrinterUpdates();closeOverlay('modal-cierre');renderCierres();updateHeader();
   toast('Cierre registrado ✓');
 }
 

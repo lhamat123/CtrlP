@@ -514,6 +514,13 @@ async function loadData() {
   renderSidebar();
   renderPrinters();
   updateStats();
+  // Abrir vista de impresora si viene ?printer=ID en la URL
+  const _qp = new URLSearchParams(window.location.search);
+  const _pid = _qp.get('printer');
+  if(_pid){
+    const _p = printers.find(x=>x.id===_pid);
+    if(_p){ setTimeout(()=>openView(_pid), 200); }
+  }
 }
 
 async function saveData() {
