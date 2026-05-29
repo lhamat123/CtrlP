@@ -526,20 +526,22 @@ async function loadData() {
   if(_pid){
     const _p = printers.find(x=>x.id===_pid);
     if(_p){
-      // Update splash name before opening
-      const sn=document.getElementById('printer-splash-name');
-      if(sn) sn.textContent=_p.name||'Cargando…';
+      // Open view first, then hide splash with a tiny delay so the overlay paints
       openView(_pid);
-      // Hide splash after view opens
-      const sp=document.getElementById('printer-splash');
-      if(sp) sp.style.display='none';
-      // Scroll+highlight card
-      const card=document.querySelector(`[data-printer-id="${_pid}"]`);
-      if(card){card.scrollIntoView({behavior:'smooth',block:'center'});
-        card.style.transition='box-shadow .3s';
-        card.style.boxShadow='0 0 0 2px var(--accent)';
-        setTimeout(()=>card.style.boxShadow='',1800);
-      }
+      setTimeout(()=>{
+        const sp=document.getElementById('printer-splash');
+        if(sp) sp.style.display='none';
+        // Ensure overlay is actually visible (force reflow)
+        const ov=document.getElementById('view-overlay');
+        if(ov){ ov.style.display='none'; ov.offsetHeight; ov.style.display='flex'; }
+        // Scroll+highlight card
+        const card=document.querySelector(`[data-printer-id="${_pid}"]`);
+        if(card){card.scrollIntoView({behavior:'smooth',block:'center'});
+          card.style.transition='box-shadow .3s';
+          card.style.boxShadow='0 0 0 2px var(--accent)';
+          setTimeout(()=>card.style.boxShadow='',1800);
+        }
+      }, 80);
     } else {
       const sp=document.getElementById('printer-splash');
       if(sp) sp.style.display='none';
