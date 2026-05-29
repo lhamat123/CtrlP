@@ -209,8 +209,7 @@ tbody tr:last-child td{border-bottom:none}
     </div>
   </a>
   <div class="header-right">
-    <div class="stat-pill"><div class="dot"></div><span id="hdr-empresas">0 empresas</span></div>
-    <div class="stat-pill" style="color:var(--yellow)">📅 <span id="hdr-cierres">0 cierres</span></div>
+
     <div class="theme-sw">
       <button class="tbtn on" id="th-cyber"  onclick="setTheme('cyber')"  title="Cyber">🌌</button>
       <button class="tbtn"    id="th-night"  onclick="setTheme('night')"  title="Noche">🌙</button>
@@ -415,8 +414,7 @@ function toast(msg,err=false){
 }
 
 function updateHeader(){
-  document.getElementById('hdr-empresas').textContent=db.empresas.length+' empresas';
-  document.getElementById('hdr-cierres').textContent=db.cierres.length+' cierres';
+
 }
 
 // ═══ NAV ═══
@@ -496,11 +494,11 @@ function renderDashboard(){
   </div>
   <div class="card"><div class="card-title">Todas las empresas — vista rápida</div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>Empresa</th><th class="td-num">Precio/hoja</th><th>Día cierre</th><th>Próximo cierre</th><th class="td-num">Cierres</th></tr></thead>
+      <thead><tr><th>Empresa</th><th>Impresoras</th><th>Día cierre</th><th>Próximo cierre</th><th class="td-num">Cierres</th></tr></thead>
       <tbody>${db.empresas.map(e=>{const nc=nextClose(e);const days=nc?daysUntil(nc):999;
         return`<tr>
           <td style="font-weight:600">${e.nombre}</td>
-          <td class="td-num td-mono">${e.precio} CUP</td>
+          <td style="font-size:10px;font-family:'DM Mono',monospace">${(()=>{const ps=(db.printers||[]).filter(p=>p.company===e.id);const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';return ps.length?ps.map(p=>si(p.status)+' '+p.name).join('<br>'):'—';})()}</td>
           <td class="td-mono" style="color:var(--text2)">día ${e.diaCierre}</td>
           <td>${nc?`<span class="badge ${days<=3?'':'badge-pending'}" style="${days<=3?'background:rgba(255,82,82,.12);color:var(--red);border:1px solid rgba(255,82,82,.3)':days<=7?'':'background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.25)'}">${days}d</span>
             <span style="font-size:10px;color:var(--text2);margin-left:6px">${nc.toLocaleDateString('es-CU')}</span>`:'—'}</td>
@@ -530,7 +528,13 @@ function renderEmpresas(){
         ${e.responsable?`<div style="font-size:10px;color:var(--text2);margin-top:2px">${e.responsable}${e.ci?' · CI: '+e.ci:''} · ${e.cargo}</div>`:''}
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:12px">
-        <div style="font-family:'DM Mono',monospace;font-size:14px;font-weight:600;color:var(--accent)">${e.precio} CUP/hoja</div>
+        <div style="text-align:right">
+          ${(()=>{const ps=(db.printers||[]).filter(p=>p.company===e.id);
+            if(!ps.length)return'<div style=\"font-size:10px;color:var(--text2);font-style:italic\">Sin impresoras</div>';
+            const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
+            return ps.map(p=>'<div style=\"font-size:10px;font-family:\x27DM Mono\x27,monospace;white-space:nowrap\">'+si(p.status)+' '+p.name+(p.dept?'<span style=\"color:var(--text2);margin-left:5px\">'+(p.dept)+'</span>':'')+'</div>').join('');
+          })()}
+        </div>
         <button class="btn btn-ghost btn-sm" onclick="openEmpModal('${e.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="delEmp('${e.id}')">✕</button>
       </div>
