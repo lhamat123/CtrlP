@@ -262,8 +262,15 @@ tbody tr:last-child td{border-bottom:none}
     <div class="form-row">
       <div class="form-group"><label class="form-label">Día habitual de cierre</label><input class="form-input" type="number" id="e-dia" value="28" min="1" max="31"></div>
     </div>
-    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin:10px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border)">Departamentos e impresoras</div>
-    <div id="e-deptos-blocks"></div>
+    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);margin:10px 0 0;padding-bottom:5px">Departamentos e impresoras</div>
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div style="display:grid;grid-template-columns:160px 1fr 28px;background:var(--surface2);border-bottom:1px solid var(--border)">
+        <div style="padding:5px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);border-right:1px solid var(--border)">Departamento</div>
+        <div style="padding:5px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2)">Impresoras asignadas</div>
+        <div></div>
+      </div>
+      <div id="e-deptos-blocks"></div>
+    </div>
     <button class="btn btn-ghost btn-sm" onclick="addEmpDepto()" style="margin-bottom:8px">+ Departamento</button>
   </div>
   <div class="modal-footer">
@@ -595,38 +602,52 @@ function addEmpDepto(deptName, printerIds){
   const empId=_editEmpId||'new';
   const did='edp'+(++_empDeptId);
   const container=document.getElementById('e-deptos-blocks');
-  const div=document.createElement('div');
-  div.id=did;
-  div.style.cssText='border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px';
-  div.innerHTML=`
-    <div style="background:var(--surface2);padding:7px 10px;display:flex;align-items:center;gap:8px">
-      <input class="form-input edp-name" value="${deptName||''}" placeholder="Nombre del departamento" style="font-size:12px;font-weight:600;flex:1">
-      <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${did}').remove();_empRefreshSelects()">✕</button>
+  const row=document.createElement('div');
+  row.id=did;
+  row.style.cssText='display:grid;grid-template-columns:160px 1fr 28px;gap:0;border-bottom:1px solid var(--border);align-items:start';
+  row.innerHTML=`
+    <div style="padding:8px 10px;border-right:1px solid var(--border)">
+      <input class="edp-name" value="${deptName||''}" placeholder="Departamento…"
+        style="width:100%;background:none;border:none;outline:none;font-size:11px;font-weight:700;color:var(--text);font-family:inherit;letter-spacing:.3px">
     </div>
-    <div id="${did}-printers" style="padding:8px 10px"></div>
-    <div style="padding:0 10px 8px">
-      <button class="btn btn-ghost btn-sm" onclick="addEmpPrinterRow('${did}','${empId}')">+ impresora</button>
-    </div>`;
-  container.appendChild(div);
+    <div id="${did}-printers" style="padding:6px 8px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:36px">
+      <button class="edp-add-btn" onclick="addEmpPrinterRow('${did}','${empId}')"
+        style="background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:2px 7px;cursor:pointer;transition:all .15s"
+        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">＋</button>
+    </div>
+    <button style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px 6px;align-self:center;transition:color .15s"
+      onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'"
+      onclick="document.getElementById('${did}').remove();_empRefreshSelects()">✕</button>`;
+  container.appendChild(row);
   const ps=printerIds&&printerIds.length?printerIds:[''];
   ps.forEach(pid=>addEmpPrinterRow(did, empId, pid));
 }
 
 function addEmpPrinterRow(did, empId, selectedId){
   const rid='epr'+(++_empDeptId);
-  const row=document.createElement('div');
-  row.id=rid;
-  row.style.cssText='display:flex;gap:6px;align-items:center;margin-bottom:5px';
+  const container=document.getElementById(did+'-printers');
+  const addBtn=container.querySelector('.edp-add-btn');
+  const chip=document.createElement('div');
+  chip.id=rid;
+  chip.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 4px 2px 8px;font-size:10px;max-width:160px';
   const hasPrinters=db.printers&&db.printers.length>0;
   if(hasPrinters){
-    row.innerHTML=`<select class="form-select edp-printer-sel" style="flex:1;font-size:11px;padding:5px 8px"
+    chip.innerHTML=`<select class="edp-printer-sel"
+      style="background:none;border:none;outline:none;font-size:10px;color:var(--text);font-family:inherit;max-width:120px;cursor:pointer"
       onchange="_empRefreshSelects('${rid}')">${_empPrinterOpts(empId,selectedId||'')}</select>
-      <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${rid}').remove();_empRefreshSelects()">✕</button>`;
+      <button style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;line-height:1;padding:0 2px"
+        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'"
+        onclick="document.getElementById('${rid}').remove();_empRefreshSelects()">✕</button>`;
   } else {
-    row.innerHTML=`<input class="form-input edp-printer-txt" value="${selectedId||''}" placeholder="Nombre impresora" style="flex:1;font-size:11px">
-      <button class="btn btn-danger btn-sm" style="padding:3px 7px" onclick="document.getElementById('${rid}').remove()">✕</button>`;
+    chip.innerHTML=`<input class="edp-printer-txt" value="${selectedId||''}" placeholder="Impresora"
+      style="background:none;border:none;outline:none;font-size:10px;color:var(--text);font-family:inherit;width:100px">
+      <button style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;line-height:1;padding:0 2px"
+        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'"
+        onclick="document.getElementById('${rid}').remove()">✕</button>`;
   }
-  document.getElementById(did+'-printers').appendChild(row);
+  // Insert chip before the ＋ button
+  container.insertBefore(chip, addBtn);
 }
 
 function _empRefreshSelects(exceptId){

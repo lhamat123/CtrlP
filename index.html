@@ -251,6 +251,12 @@ header{position:relative;z-index:10;display:flex;align-items:center;justify-cont
 <body>
 
 <div id="loading-bar"></div>
+<div id="printer-splash" style="display:none;position:fixed;inset:0;z-index:9998;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="font-size:48px;animation:spin 1.2s linear infinite">🖨️</div>
+  <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--text)" id="printer-splash-name">Cargando impresora…</div>
+  <div style="font-size:11px;color:var(--text2)">Obteniendo datos desde GitHub…</div>
+</div>
+<style>@keyframes spin{0%{transform:rotate(-10deg) scale(1)}50%{transform:rotate(10deg) scale(1.1)}100%{transform:rotate(-10deg) scale(1)}}</style>
 <div id="toast"></div>
 
 <header>
@@ -519,7 +525,26 @@ async function loadData() {
   const _pid = _qp.get('printer');
   if(_pid){
     const _p = printers.find(x=>x.id===_pid);
-    if(_p){ setTimeout(()=>openView(_pid), 200); }
+    if(_p){
+      // Update splash name before opening
+      const sn=document.getElementById('printer-splash-name');
+      if(sn) sn.textContent=_p.name||'Cargando…';
+      openView(_pid);
+      // Hide splash after view opens
+      const sp=document.getElementById('printer-splash');
+      if(sp) sp.style.display='none';
+      // Scroll+highlight card
+      const card=document.querySelector(`[data-printer-id="${_pid}"]`);
+      if(card){card.scrollIntoView({behavior:'smooth',block:'center'});
+        card.style.transition='box-shadow .3s';
+        card.style.boxShadow='0 0 0 2px var(--accent)';
+        setTimeout(()=>card.style.boxShadow='',1800);
+      }
+    } else {
+      const sp=document.getElementById('printer-splash');
+      if(sp) sp.style.display='none';
+      toast('Impresora no encontrada — puede que el JSON no esté sincronizado','err');
+    }
   }
 }
 
@@ -614,7 +639,7 @@ function cardHTML(p) {
   const c=co(p), d=ds(p), wa=d!==null&&d>120;
   const cl=dc(p), ca=cl!==null&&cl<=0&&cl>=-30; // alerta: dentro de los 30d posteriores al cierre
   const editBtn = isAuth ? `<button class="icon-btn" onclick="event.stopPropagation();openModal('${p.id}')">✏️</button>` : '';
-  return `<div class="printer-card${ca?' card-closing':wa?' card-maint':''}" onclick="${isAuth?`openModal('${p.id}')`:`openView('${p.id}')`}" style="cursor:pointer">
+  return `<div class="printer-card${ca?' card-closing':wa?' card-maint':''}" data-printer-id="${p.id}" onclick="${isAuth?`openModal('${p.id}')`:`openView('${p.id}')`}" style="cursor:pointer">
     <div class="card-image">${p.image?`<img src="${p.image}" alt="">`:'<span class="no-img">🖨️</span>'}<span class="card-status ${sc(p)}">${p.status}</span></div>
     <div class="card-body">
       <div class="card-id">${p.code}</div><div class="card-name">${p.name}</div>
@@ -639,7 +664,7 @@ function rowHTML(p) {
   const c=co(p), d=ds(p), wa=d!==null&&d>120;
   const cl=dc(p), ca=cl!==null&&cl<=0&&cl>=-30;
   const editBtn = isAuth ? `<button class="icon-btn" onclick="event.stopPropagation();openModal('${p.id}')">✏️</button>` : '';
-  return `<div class="printer-row${ca?' card-closing':wa?' card-maint':''}" onclick="${isAuth?`openModal('${p.id}')`:`openView('${p.id}')`}" style="cursor:pointer">
+  return `<div class="printer-row${ca?' card-closing':wa?' card-maint':''}" data-printer-id="${p.id}" onclick="${isAuth?`openModal('${p.id}')`:`openView('${p.id}')`}" style="cursor:pointer">
     <div class="row-img">${p.image?`<img src="${p.image}">`:'🖨️'}</div>
     <div><div style="font-size:12px;font-weight:500">${p.name}</div><div style="font-size:9px;color:var(--accent)">${p.code}</div>${wa?'<div style="font-size:9px;color:var(--yellow);margin-top:2px">⚠️ Mant. hace '+d+'d</div>':''}${ca?'<div style="font-size:9px;color:var(--red);margin-top:2px">🔴 Cerrado hace '+Math.abs(cl)+'d</div>':''}</div>
     <div><div style="font-size:11px;color:${c.color}"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c.color};margin-right:4px;flex-shrink:0;vertical-align:middle"></span>${c.name}</div><div style="font-size:9px;color:var(--text2)">${p.dept||'—'}</div></div>
@@ -998,6 +1023,14 @@ function fmtN(n) { if(!n&&n!==0) return '—'; return Number(n).toLocaleString('
 
 // ── ARRANQUE ──
 updateAuthUI();
+// Detectar ?printer= antes de cargar para mostrar splash inmediato
+(function(){
+  const _sp = new URLSearchParams(window.location.search).get('printer');
+  if(_sp){
+    const el = document.getElementById('printer-splash');
+    if(el) el.style.display = 'flex';
+  }
+})();
 loadData();
 </script>
 
