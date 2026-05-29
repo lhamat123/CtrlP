@@ -271,7 +271,7 @@ tbody tr:last-child td{border-bottom:none}
       </div>
       <div id="e-deptos-blocks"></div>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="addEmpDepto()" style="margin-bottom:8px">+ Departamento</button>
+    <button class="btn btn-ghost btn-sm" id="e-add-depto-btn" onclick="addEmpDepto()" style="margin-bottom:8px">+ Departamento</button>
   </div>
   <div class="modal-footer">
     <button class="btn btn-ghost" onclick="closeOverlay('modal-emp')">Cancelar</button>
@@ -564,13 +564,15 @@ function _empUsedIds(){
   return used;
 }
 
-// Impresoras libres: inactivas/mantenimiento de cualquier empresa, no usadas en otro bloque
+// Impresoras disponibles para intercambio:
+// NO activas (Inactiva o Mantenimiento) + no usadas ya en este modal
+// Una impresora Activa asignada a otro dpto/empresa NO está disponible
 function _empFreePrinters(exceptId){
   const used=_empUsedIds();
   return (db.printers||[]).filter(p=>{
-    if(p.id===exceptId) return true;
-    if(used.has(p.id)) return false;
-    return p.status!=='Activa';
+    if(p.id===exceptId) return false; // excluir la actual (no intercambiar por sí misma)
+    if(used.has(p.id)) return false;  // ya usada en otro chip del modal
+    return p.status!=='Activa';       // solo Inactiva o Mantenimiento
   });
 }
 
@@ -612,7 +614,7 @@ function _addChipPlusBtn(did, empId){
   btn.textContent='＋';
   btn.onmouseover=()=>{btn.style.borderColor='var(--accent)';btn.style.color='var(--accent)';};
   btn.onmouseout=()=>{btn.style.borderColor='var(--border)';btn.style.color='var(--text2)';};
-  btn.onclick=()=>_addPrinterChip(did, empId, '');
+  btn.onclick=()=>_openFreePickerFromBtn(did, empId);
   chips.appendChild(btn);
 }
 
@@ -641,15 +643,47 @@ function _addPrinterChip(did, empId, printerId){
         style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:0 2px;transition:color .15s"
         onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'">✕</button>`;
   } else {
-    // Chip vacío: abrir picker directamente
-    chip.innerHTML=`<span style="color:var(--text2);font-style:italic;font-size:10px">seleccionar…</span>
-      <button onclick="document.getElementById('${rid}').remove()"
-        style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:0 2px">✕</button>`;
-    // Auto-open picker after DOM inserts
-    setTimeout(()=>_openSwapPicker(rid, did, empId), 50);
+    // No printerId — don't create a chip, open a floating picker from the ＋ btn instead
+    _openFreePickerFromBtn(did, empId);
+    return;
   }
 
   chips.insertBefore(chip, addBtn||null);
+}
+
+/* Picker flotante desde el botón ＋ — sin crear chip vacío */
+function _openFreePickerFromBtn(did, empId){
+  document.querySelectorAll('.swap-picker').forEach(el=>el.remove());
+  const addBtn=document.getElementById(did+'-chips')&&document.getElementById(did+'-chips').querySelector('.edp-add-btn');
+  if(!addBtn) return;
+  const free=_empFreePrinters('');
+  const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
+  const picker=document.createElement('div');
+  picker.className='swap-picker';
+  picker.style.cssText='position:absolute;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:10px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden';
+  if(!free.length){
+    picker.innerHTML=`<div style="padding:10px 12px;font-size:10px;color:var(--text2);font-style:italic">No hay impresoras libres</div>`;
+  } else {
+    picker.innerHTML=`<div style="padding:5px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);border-bottom:1px solid var(--border)">Agregar impresora libre:</div>`+
+      free.map(fp=>`<div onclick="_addPrinterChip('${did}','${empId}','${fp.id}');this.closest('.swap-picker').remove()"
+        style="padding:7px 12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .1s;font-family:'DM Mono',monospace"
+        onmouseover="this.style.background='rgba(255,255,255,.05)'"
+        onmouseout="this.style.background=''">
+        <span>${si(fp.status)}</span><span style="flex:1">${fp.name}</span>
+        <span style="font-size:9px;color:var(--text2)">${fp.status}</span>
+      </div>`).join('');
+  }
+  // Position below the ＋ button
+  addBtn.style.position='relative';
+  addBtn.appendChild(picker);
+  setTimeout(()=>{
+    document.addEventListener('click', function _cls(e){
+      if(!picker.contains(e.target)&&e.target!==addBtn){
+        picker.remove();
+        document.removeEventListener('click',_cls);
+      }
+    });
+  },10);
 }
 
 /* Mini dropdown para intercambio — aparece bajo el chip */
@@ -734,15 +768,26 @@ function openEmpModal(id){
   // Render dept blocks
   const container=document.getElementById('e-deptos-blocks');
   container.innerHTML='';_empDeptId=0;
-  if(emp&&emp.deptos&&emp.deptos.length){
-    emp.deptos.forEach(d=>{
-      // Find printer IDs currently assigned to this dept for this company
-      const deptPrinters=(db.printers||[]).filter(p=>p.company===emp.id&&p.dept===d).map(p=>p.id);
-      addEmpDepto(d, deptPrinters.length?deptPrinters:['']);
+  // Group printers by their actual dept field from db.printers
+  const compPrinters=(db.printers||[]).filter(p=>p.company===emp.id);
+  if(compPrinters.length){
+    // Build dept groups from actual printer data (not from emp.deptos)
+    const deptMap=new Map();
+    compPrinters.forEach(p=>{
+      const d=p.dept||'Sin departamento';
+      if(!deptMap.has(d)) deptMap.set(d,[]);
+      deptMap.get(d).push(p.id);
     });
+    deptMap.forEach((ids,dname)=>addEmpDepto(dname,ids));
+  } else if(emp&&emp.deptos&&emp.deptos.length){
+    // No printers in cache yet — fall back to emp.deptos names
+    emp.deptos.forEach(d=>addEmpDepto(d,[]));
   } else {
     addEmpDepto();
   }
+  // Show "+ Departamento" only for new empresa
+  const addDBtn=document.getElementById('e-add-depto-btn');
+  if(addDBtn) addDBtn.style.display=emp?'none':'inline-flex';
   openOverlay('modal-emp');
 }
 
