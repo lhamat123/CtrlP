@@ -498,6 +498,38 @@ async function ghFetch(method, body) {
 
 async function loadData() {
   showLoad(true);
+
+  // Si venimos desde facturacion con cache precargado, usarlo inmediatamente
+  // para abrir la vista sin esperar el fetch a GitHub
+  try {
+    const _pc = sessionStorage.getItem('pctrl_printers_cache');
+    const _cc = sessionStorage.getItem('pctrl_companies_cache');
+    if(_pc) {
+      printers = JSON.parse(_pc);
+      if(_cc) companies = JSON.parse(_cc);
+      showLoad(false);
+      renderSidebar();
+      renderPrinters();
+      updateStats();
+      const _qp2 = new URLSearchParams(window.location.search);
+      const _pid2 = _qp2.get('printer');
+      if(_pid2 && printers.find(x=>x.id===_pid2)){
+        openView(_pid2);
+        setTimeout(()=>{
+          const sp=document.getElementById('printer-splash');
+          if(sp) sp.style.display='none';
+          const ov=document.getElementById('view-overlay');
+          if(ov){ ov.style.display='none'; ov.offsetHeight; ov.style.display='flex'; }
+        }, 60);
+      }
+      // Then refresh from GitHub in background silently
+      sessionStorage.removeItem('pctrl_printers_cache');
+      sessionStorage.removeItem('pctrl_companies_cache');
+      _bgRefresh();
+      return;
+    }
+  } catch(e){}
+
   try {
     // Lectura siempre pública — sin token, sin auth
     const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
@@ -548,6 +580,24 @@ async function loadData() {
       toast('Impresora no encontrada — puede que el JSON no esté sincronizado','err');
     }
   }
+}
+
+/* Refresca datos desde GitHub en segundo plano sin bloquear la UI */
+async function _bgRefresh(){
+  try{
+    const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,{
+      headers:{'Accept':'application/vnd.github+json'}
+    });
+    if(!res.ok) return;
+    const json = await res.json();
+    fileSHA = json.sha;
+    const raw = JSON.parse(atob(json.content.replace(/\n/g,'')));
+    printers  = raw.printers  || [];
+    companies = raw.companies || [];
+    renderSidebar();
+    renderPrinters();
+    updateStats();
+  }catch(e){}
 }
 
 async function saveData() {

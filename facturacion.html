@@ -507,7 +507,7 @@ function renderDashboard(){
       <tbody>${db.empresas.map(e=>{const nc=nextClose(e);const days=nc?daysUntil(nc):999;
         return`<tr>
           <td style="font-weight:600">${e.nombre}</td>
-          <td style="font-size:10px;font-family:'DM Mono',monospace">${(()=>{const ps=(db.printers||[]).filter(p=>p.company===e.id);const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';return ps.length?ps.map(p=>`<a href="index.html?printer=${p.id}" style="display:block;text-decoration:none;color:inherit" title="Ver en Ctrl+P">${si(p.status)} ${p.name} <span style="color:var(--accent);font-size:9px">↗</span></a>`).join(''):'—';})()}</td>
+          <td style="font-size:10px;font-family:'DM Mono',monospace">${(()=>{const ps=(db.printers||[]).filter(p=>p.company===e.id);const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';return ps.length?ps.map(p=>`<a href="index.html?printer=${p.id}" onclick="try{sessionStorage.setItem('pctrl_printers_cache',JSON.stringify(db.printers));sessionStorage.setItem('pctrl_companies_cache',JSON.stringify(db.empresas));}catch(e){}" style="display:block;text-decoration:none;color:inherit" title="Ver en Ctrl+P">${si(p.status)} ${p.name} <span style="color:var(--accent);font-size:9px">↗</span></a>`).join(''):'—';})()}</td>
           <td class="td-mono" style="color:var(--text2)">día ${e.diaCierre}</td>
           <td>${nc?`<span class="badge ${days<=3?'':'badge-pending'}" style="${days<=3?'background:rgba(255,82,82,.12);color:var(--red);border:1px solid rgba(255,82,82,.3)':days<=7?'':'background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.25)'}">${days}d</span>
             <span style="font-size:10px;color:var(--text2);margin-left:6px">${nc.toLocaleDateString('es-CU')}</span>`:'—'}</td>
@@ -541,7 +541,7 @@ function renderEmpresas(){
           ${(()=>{const ps=(db.printers||[]).filter(p=>p.company===e.id);
             if(!ps.length)return'<div style=\"font-size:10px;color:var(--text2);font-style:italic\">Sin impresoras</div>';
             const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
-            return ps.map(p=>'<a href="index.html?printer='+p.id+'" title="Ver en Ctrl+P" style="display:block;font-size:10px;font-family:\x27DM Mono\x27,monospace;white-space:nowrap;text-decoration:none;color:inherit">'+si(p.status)+' '+p.name+(p.dept?'<span style="color:var(--text2);margin-left:5px">'+(p.dept)+'</span>':'')+' <span style="color:var(--accent);font-size:9px">↗</span></a>').join('');
+            return ps.map(p=>'<a href="index.html?printer='+p.id+'" onclick="try{sessionStorage.setItem(\x27pctrl_printers_cache\x27,JSON.stringify(db.printers));sessionStorage.setItem(\x27pctrl_companies_cache\x27,JSON.stringify(db.empresas));}catch(e){}" title="Ver en Ctrl+P" style="display:block;font-size:10px;font-family:\x27DM Mono\x27,monospace;white-space:nowrap;text-decoration:none;color:inherit">'+si(p.status)+' '+p.name+(p.dept?'<span style="color:var(--text2);margin-left:5px">'+(p.dept)+'</span>':'')+' <span style="color:var(--accent);font-size:9px">↗</span></a>').join('');
           })()}
         </div>
         <button class="btn btn-ghost btn-sm" onclick="openEmpModal('${e.id}')">✏️</button>
@@ -553,49 +553,25 @@ function renderEmpresas(){
 
 let _empDeptId=0;
 
-/* Impresoras disponibles para asignar a un dpto de esta empresa:
-   - Ya asignadas a ese dpto (se incluyen siempre)
-   - Libres: no activas O activas sin dpto O activas de esta empresa
-     que no estén ya usadas en otro bloque del modal */
-function _empAvailPrinters(empId, currentPrinterIds){
-  if(!db.printers||!db.printers.length) return [];
-  // IDs ya asignados en todos los bloques del modal
-  const usedInModal=new Set();
-  document.querySelectorAll('#e-deptos-blocks .edp-printer-sel').forEach(sel=>{
-    if(sel.value) usedInModal.add(sel.value);
+/* ── Utilidades de impresoras para modal empresa ── */
+
+// IDs actualmente asignados en el modal (para evitar repetición)
+function _empUsedIds(){
+  const used=new Set();
+  document.querySelectorAll('#e-deptos-blocks [data-printer-id]').forEach(el=>{
+    used.add(el.dataset.printerId);
   });
-  return db.printers.filter(p=>{
-    if(currentPrinterIds&&currentPrinterIds.includes(p.id)) return true; // propia del bloque
-    if(usedInModal.has(p.id)) return false; // ya en otro bloque
-    // Libre: no activa, o activa de esta empresa sin dpto asignado
-    if(p.status!=='Activa') return true;
-    if(p.company===empId&&(!p.dept||p.dept==='')) return true;
-    return false;
-  });
+  return used;
 }
 
-function _empPrinterOpts(empId, selectedId){
-  const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
-  const all=db.printers||[];
-  const usedInModal=new Set();
-  document.querySelectorAll('#e-deptos-blocks .edp-printer-sel').forEach(sel=>{
-    if(sel.value&&sel.value!==selectedId) usedInModal.add(sel.value);
+// Impresoras libres: inactivas/mantenimiento de cualquier empresa, no usadas en otro bloque
+function _empFreePrinters(exceptId){
+  const used=_empUsedIds();
+  return (db.printers||[]).filter(p=>{
+    if(p.id===exceptId) return true;
+    if(used.has(p.id)) return false;
+    return p.status!=='Activa';
   });
-  const opts=all.filter(p=>p.id===selectedId||!usedInModal.has(p.id));
-  const activas=opts.filter(p=>p.status==='Activa'&&p.company===empId);
-  const libres=opts.filter(p=>p.id!==selectedId&&(p.status!=='Activa'||p.company!==empId));
-  let html='<option value="">— impresora —</option>';
-  if(activas.length){
-    html+=`<optgroup label="Activas (esta empresa)">`;
-    activas.forEach(p=>{html+=`<option value="${p.id}"${p.id===selectedId?' selected':''}>${si(p.status)} ${p.name}${p.dept?' ('+p.dept+')':''}</option>`;});
-    html+=`</optgroup>`;
-  }
-  if(libres.length){
-    html+=`<optgroup label="Libres / intercambio">`;
-    libres.forEach(p=>{html+=`<option value="${p.id}"${p.id===selectedId?' selected':''}>${si(p.status)} ${p.name} · ${p.status}</option>`;});
-    html+=`</optgroup>`;
-  }
-  return html;
 }
 
 function addEmpDepto(deptName, printerIds){
@@ -610,56 +586,136 @@ function addEmpDepto(deptName, printerIds){
       <input class="edp-name" value="${deptName||''}" placeholder="Departamento…"
         style="width:100%;background:none;border:none;outline:none;font-size:11px;font-weight:700;color:var(--text);font-family:inherit;letter-spacing:.3px">
     </div>
-    <div id="${did}-printers" style="padding:6px 8px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:36px">
-      <button class="edp-add-btn" onclick="addEmpPrinterRow('${did}','${empId}')"
-        style="background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text2);font-size:10px;padding:2px 7px;cursor:pointer;transition:all .15s"
-        onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
-        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">＋</button>
-    </div>
+    <div id="${did}-chips" style="padding:6px 8px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;min-height:38px"></div>
     <button style="background:none;border:none;color:var(--text2);font-size:13px;cursor:pointer;padding:8px 6px;align-self:center;transition:color .15s"
       onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'"
-      onclick="document.getElementById('${did}').remove();_empRefreshSelects()">✕</button>`;
+      onclick="document.getElementById('${did}').remove()">✕</button>`;
   container.appendChild(row);
-  const ps=printerIds&&printerIds.length?printerIds:[''];
-  ps.forEach(pid=>addEmpPrinterRow(did, empId, pid));
+  // Render existing printer chips or one empty slot
+  const ps=printerIds&&printerIds.filter(Boolean).length?printerIds.filter(Boolean):[];
+  if(ps.length){
+    ps.forEach(pid=>_addPrinterChip(did, empId, pid));
+  }
+  // Always add the ＋ button at the end
+  _addChipPlusBtn(did, empId);
 }
 
-function addEmpPrinterRow(did, empId, selectedId){
+function _addChipPlusBtn(did, empId){
+  const chips=document.getElementById(did+'-chips');
+  // Remove existing plus btn if any
+  const old=chips.querySelector('.edp-add-btn');
+  if(old) old.remove();
+  const btn=document.createElement('button');
+  btn.className='edp-add-btn';
+  btn.title='Agregar impresora libre';
+  btn.style.cssText='background:none;border:1px dashed var(--border);border-radius:6px;color:var(--text2);font-size:13px;padding:1px 8px;cursor:pointer;transition:all .15s;line-height:1.6';
+  btn.textContent='＋';
+  btn.onmouseover=()=>{btn.style.borderColor='var(--accent)';btn.style.color='var(--accent)';};
+  btn.onmouseout=()=>{btn.style.borderColor='var(--border)';btn.style.color='var(--text2)';};
+  btn.onclick=()=>_addPrinterChip(did, empId, '');
+  chips.appendChild(btn);
+}
+
+/* Chip de impresora: muestra nombre+estado, con botón intercambio (⇄) y quitar (✕) */
+function _addPrinterChip(did, empId, printerId){
+  const chips=document.getElementById(did+'-chips');
+  const addBtn=chips.querySelector('.edp-add-btn');
   const rid='epr'+(++_empDeptId);
-  const container=document.getElementById(did+'-printers');
-  const addBtn=container.querySelector('.edp-add-btn');
+
+  const p=printerId?(db.printers||[]).find(x=>x.id===printerId):null;
+  const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
+
   const chip=document.createElement('div');
   chip.id=rid;
-  chip.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px 4px 2px 8px;font-size:10px;max-width:160px';
-  const hasPrinters=db.printers&&db.printers.length>0;
-  if(hasPrinters){
-    chip.innerHTML=`<select class="edp-printer-sel"
-      style="background:none;border:none;outline:none;font-size:10px;color:var(--text);font-family:inherit;max-width:120px;cursor:pointer"
-      onchange="_empRefreshSelects('${rid}')">${_empPrinterOpts(empId,selectedId||'')}</select>
-      <button style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;line-height:1;padding:0 2px"
-        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'"
-        onclick="document.getElementById('${rid}').remove();_empRefreshSelects()">✕</button>`;
+  chip.dataset.printerId=printerId||'';
+  chip.style.cssText="display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 6px 3px 9px;font-size:10px;font-family:'DM Mono',monospace;white-space:nowrap;position:relative";
+
+  if(p){
+    // Chip con impresora asignada
+    chip.innerHTML=`<span style="margin-right:2px">${si(p.status)}</span>
+      <span class="chip-name" style="max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${p.name}">${p.name}</span>
+      <button title="Intercambiar por impresora libre" onclick="_openSwapPicker('${rid}','${did}','${empId}')"
+        style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:0 2px;transition:color .15s"
+        onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text2)'">⇄</button>
+      <button onclick="document.getElementById('${rid}').remove()"
+        style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:0 2px;transition:color .15s"
+        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'">✕</button>`;
   } else {
-    chip.innerHTML=`<input class="edp-printer-txt" value="${selectedId||''}" placeholder="Impresora"
-      style="background:none;border:none;outline:none;font-size:10px;color:var(--text);font-family:inherit;width:100px">
-      <button style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;line-height:1;padding:0 2px"
-        onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'"
-        onclick="document.getElementById('${rid}').remove()">✕</button>`;
+    // Chip vacío: abrir picker directamente
+    chip.innerHTML=`<span style="color:var(--text2);font-style:italic;font-size:10px">seleccionar…</span>
+      <button onclick="document.getElementById('${rid}').remove()"
+        style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:0 2px">✕</button>`;
+    // Auto-open picker after DOM inserts
+    setTimeout(()=>_openSwapPicker(rid, did, empId), 50);
   }
-  // Insert chip before the ＋ button
-  container.insertBefore(chip, addBtn);
+
+  chips.insertBefore(chip, addBtn||null);
 }
 
-function _empRefreshSelects(exceptId){
-  const empId=_editEmpId||'new';
-  document.querySelectorAll('#e-deptos-blocks .edp-printer-sel').forEach(sel=>{
-    const rid=sel.closest('[id^="epr"]')&&sel.closest('[id^="epr"]').id;
-    if(rid===exceptId)return;
-    const cur=sel.value;
-    sel.innerHTML=_empPrinterOpts(empId,cur);
-    sel.value=cur;
-  });
+/* Mini dropdown para intercambio — aparece bajo el chip */
+function _openSwapPicker(rid, did, empId){
+  // Close any open picker first
+  document.querySelectorAll('.swap-picker').forEach(el=>el.remove());
+
+  const chip=document.getElementById(rid);
+  if(!chip) return;
+  const curId=chip.dataset.printerId||'';
+  const free=_empFreePrinters(curId);
+  const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
+
+  const picker=document.createElement('div');
+  picker.className='swap-picker';
+  picker.style.cssText='position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:10px;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.4);overflow:hidden';
+
+  if(!free.length){
+    picker.innerHTML=`<div style="padding:10px 12px;font-size:10px;color:var(--text2);font-style:italic">No hay impresoras libres disponibles</div>`;
+  } else {
+    picker.innerHTML=`<div style="padding:5px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);border-bottom:1px solid var(--border)">Intercambiar por:</div>`+
+      free.map(fp=>`<div onclick="_doSwap('${rid}','${fp.id}','${did}','${empId}')"
+        style="padding:7px 12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .1s;font-family:'DM Mono',monospace"
+        onmouseover="this.style.background='var(--surface3,var(--surface))'"
+        onmouseout="this.style.background=''">
+        <span>${si(fp.status)}</span>
+        <span style="flex:1">${fp.name}</span>
+        <span style="font-size:9px;color:var(--text2)">${fp.status}</span>
+      </div>`).join('');
+  }
+
+  chip.style.position='relative';
+  chip.appendChild(picker);
+
+  // Close on outside click
+  setTimeout(()=>{
+    document.addEventListener('click', function _cls(e){
+      if(!picker.contains(e.target)&&!chip.contains(e.target)){
+        picker.remove();
+        document.removeEventListener('click',_cls);
+      }
+    });
+  },10);
 }
+
+/* Ejecuta el intercambio: actualiza chip con nueva impresora */
+function _doSwap(rid, newPrinterId, did, empId){
+  document.querySelectorAll('.swap-picker').forEach(el=>el.remove());
+  const chip=document.getElementById(rid);
+  if(!chip) return;
+  const p=(db.printers||[]).find(x=>x.id===newPrinterId);
+  if(!p) return;
+  const si=s=>s==='Activa'?'🟢':s==='Mantenimiento'?'🟡':'🔴';
+  chip.dataset.printerId=newPrinterId;
+  chip.innerHTML=`<span style="margin-right:2px">${si(p.status)}</span>
+    <span class="chip-name" style="max-width:110px;overflow:hidden;text-overflow:ellipsis" title="${p.name}">${p.name}</span>
+    <button title="Intercambiar por impresora libre" onclick="_openSwapPicker('${rid}','${did}','${empId}')"
+      style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:0 2px;transition:color .15s"
+      onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text2)'">⇄</button>
+    <button onclick="document.getElementById('${rid}').remove()"
+      style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:11px;padding:0 2px;transition:color .15s"
+      onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text2)'">✕</button>`;
+  chip.style.position='relative';
+}
+
+function _empRefreshSelects(){}  // ya no se necesita, se mantiene por compatibilidad
 
 function openEmpModal(id){
   _editEmpId=id||null;_empDeptId=0;
@@ -702,8 +758,7 @@ function saveEmpresa(){
     const dname=block.querySelector('.edp-name').value.trim();
     if(!dname)return;
     const printers=[];
-    block.querySelectorAll('.edp-printer-sel').forEach(sel=>{if(sel.value)printers.push(sel.value);});
-    block.querySelectorAll('.edp-printer-txt').forEach(inp=>{if(inp.value.trim())printers.push(inp.value.trim());});
+    block.querySelectorAll('[data-printer-id]').forEach(el=>{if(el.dataset.printerId)printers.push(el.dataset.printerId);});
     if(!printers.length){toast('El dpto "'+dname+'" no tiene impresora asignada',true);valid=false;return;}
     deps.push({name:dname,printers});
     // Update printer dept assignment in db.printers cache
