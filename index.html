@@ -496,93 +496,76 @@ async function ghFetch(method, body) {
   return res;
 }
 
+/* ── Abre la vista de impresora desde URL param, ocultando splash ── */
+function _openPrinterFromUrl(){
+  const _pid = new URLSearchParams(window.location.search).get('printer');
+  if(!_pid) return;
+  const sp = document.getElementById('printer-splash');
+  const _p = printers.find(x=>x.id===_pid);
+  if(_p){
+    openView(_pid);
+    if(sp) sp.style.display='none';
+    const ov=document.getElementById('view-overlay');
+    if(ov){ ov.style.display='none'; ov.offsetHeight; ov.style.display='flex'; }
+    const card=document.querySelector(`[data-printer-id="${_pid}"]`);
+    if(card){
+      card.scrollIntoView({behavior:'smooth',block:'center'});
+      card.style.transition='box-shadow .3s';
+      card.style.boxShadow='0 0 0 2px var(--accent)';
+      setTimeout(()=>card.style.boxShadow='',1800);
+    }
+  } else {
+    if(sp) sp.style.display='none';
+  }
+}
+
 async function loadData() {
   showLoad(true);
+  const _pid = new URLSearchParams(window.location.search).get('printer');
 
-  // Si venimos desde facturacion con cache precargado, usarlo inmediatamente
-  // para abrir la vista sin esperar el fetch a GitHub
+  // 1. Cache local (localStorage) — disponible siempre, incluso desde QR
   try {
-    const _pc = sessionStorage.getItem('pctrl_printers_cache');
-    const _cc = sessionStorage.getItem('pctrl_companies_cache');
-    if(_pc) {
-      printers = JSON.parse(_pc);
-      if(_cc) companies = JSON.parse(_cc);
+    const _lc = localStorage.getItem('pctrl_data_cache');
+    if(_lc){
+      const cached = JSON.parse(_lc);
+      printers  = cached.printers  || [];
+      companies = cached.companies || [];
       showLoad(false);
       renderSidebar();
       renderPrinters();
       updateStats();
-      const _qp2 = new URLSearchParams(window.location.search);
-      const _pid2 = _qp2.get('printer');
-      if(_pid2 && printers.find(x=>x.id===_pid2)){
-        openView(_pid2);
-        setTimeout(()=>{
-          const sp=document.getElementById('printer-splash');
-          if(sp) sp.style.display='none';
-          const ov=document.getElementById('view-overlay');
-          if(ov){ ov.style.display='none'; ov.offsetHeight; ov.style.display='flex'; }
-        }, 60);
-      }
-      // Then refresh from GitHub in background silently
-      sessionStorage.removeItem('pctrl_printers_cache');
-      sessionStorage.removeItem('pctrl_companies_cache');
+      if(_pid) _openPrinterFromUrl();
+      // Refrescar desde GitHub en segundo plano
       _bgRefresh();
       return;
     }
   } catch(e){}
 
+  // 2. Sin cache — fetch directo a GitHub
   try {
-    // Lectura siempre pública — sin token, sin auth
     const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`, {
       headers: { 'Accept': 'application/vnd.github+json' }
     });
-    if (!res.ok) throw new Error('No se pudo leer el archivo data.json (status '+res.status+')');
+    if (!res.ok) throw new Error('status '+res.status);
     const json = await res.json();
     fileSHA = json.sha;
     const raw = JSON.parse(atob(json.content.replace(/\n/g,'')));
     companies = raw.companies || [];
     printers  = raw.printers  || [];
+    // Guardar en cache para próximas cargas
+    try { localStorage.setItem('pctrl_data_cache', JSON.stringify({printers,companies,ts:Date.now()})); } catch(e){}
   } catch(e) {
-    // Si el archivo no existe todavía, arrancamos vacíos
-    companies = [];
-    printers  = [];
-    fileSHA   = '';
+    companies = []; printers  = []; fileSHA = '';
     console.warn('data.json no encontrado, se creará al guardar.', e.message);
   }
   showLoad(false);
   renderSidebar();
   renderPrinters();
   updateStats();
-  // Abrir vista de impresora si viene ?printer=ID en la URL
-  const _qp = new URLSearchParams(window.location.search);
-  const _pid = _qp.get('printer');
-  if(_pid){
-    const _p = printers.find(x=>x.id===_pid);
-    if(_p){
-      // Open view first, then hide splash with a tiny delay so the overlay paints
-      openView(_pid);
-      setTimeout(()=>{
-        const sp=document.getElementById('printer-splash');
-        if(sp) sp.style.display='none';
-        // Ensure overlay is actually visible (force reflow)
-        const ov=document.getElementById('view-overlay');
-        if(ov){ ov.style.display='none'; ov.offsetHeight; ov.style.display='flex'; }
-        // Scroll+highlight card
-        const card=document.querySelector(`[data-printer-id="${_pid}"]`);
-        if(card){card.scrollIntoView({behavior:'smooth',block:'center'});
-          card.style.transition='box-shadow .3s';
-          card.style.boxShadow='0 0 0 2px var(--accent)';
-          setTimeout(()=>card.style.boxShadow='',1800);
-        }
-      }, 80);
-    } else {
-      const sp=document.getElementById('printer-splash');
-      if(sp) sp.style.display='none';
-      toast('Impresora no encontrada — puede que el JSON no esté sincronizado','err');
-    }
-  }
+  if(_pid) _openPrinterFromUrl();
 }
 
-/* Refresca datos desde GitHub en segundo plano sin bloquear la UI */
+/* Refresca datos desde GitHub en segundo plano y actualiza localStorage cache */
 async function _bgRefresh(){
   try{
     const res = await fetch(`https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`,{
@@ -594,6 +577,8 @@ async function _bgRefresh(){
     const raw = JSON.parse(atob(json.content.replace(/\n/g,'')));
     printers  = raw.printers  || [];
     companies = raw.companies || [];
+    // Actualizar cache para la próxima carga
+    try { localStorage.setItem('pctrl_data_cache', JSON.stringify({printers,companies,ts:Date.now()})); } catch(e){}
     renderSidebar();
     renderPrinters();
     updateStats();
@@ -1002,6 +987,7 @@ async function savePrinter() {
   if (!ok) return;
   closeModal();
   toast('✅ Guardado en GitHub');
+  try { localStorage.setItem('pctrl_data_cache', JSON.stringify({printers,companies,ts:Date.now()})); } catch(e){}
   renderSidebar(); renderPrinters();
 }
 
